@@ -280,12 +280,12 @@ fun ActiveRunScreen(
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.34f
+                alpha = 0.46f
             )
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.72f))
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.82f))
             )
         Column(
             modifier = Modifier
@@ -307,6 +307,12 @@ fun ActiveRunScreen(
             ActivityBackgroundSelector(
                 selectedIndex = selectedBackgroundIndex,
                 onSelect = { selectedBackgroundIndex = it }
+            )
+            Text(
+                text = workoutPlan.name,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
             if (useGpsMode && locationState.lastError != null) {
                 Text(
@@ -339,9 +345,11 @@ fun ActiveRunScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
-                )
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -558,15 +566,21 @@ private fun MetricCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (large) 6.dp else 4.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f)
+            )
             Text(
                 text = value,
                 style = if (large) {
@@ -574,7 +588,8 @@ private fun MetricCard(
                 } else {
                     MaterialTheme.typography.headlineMedium
                 },
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = if (large) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
         }
     }
