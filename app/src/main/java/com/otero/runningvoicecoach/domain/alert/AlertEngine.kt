@@ -17,7 +17,8 @@ class AlertEngine(
     fun evaluate(
         state: WorkoutEngineState,
         totalDistanceMeters: Double,
-        nowMillis: Long
+        nowMillis: Long,
+        minPaceAlertIntervalMillisOverride: Long? = null
     ): List<AlertEvent> {
         val alerts = mutableListOf<AlertEvent>()
 
@@ -67,7 +68,8 @@ class AlertEngine(
             alerts = alerts,
             state = state,
             totalDistanceMeters = totalDistanceMeters,
-            nowMillis = nowMillis
+            nowMillis = nowMillis,
+            minPaceAlertIntervalMillisOverride = minPaceAlertIntervalMillisOverride
         )
 
         return alerts.sortedByPriority()
@@ -187,7 +189,8 @@ class AlertEngine(
         alerts: MutableList<AlertEvent>,
         state: WorkoutEngineState,
         totalDistanceMeters: Double,
-        nowMillis: Long
+        nowMillis: Long,
+        minPaceAlertIntervalMillisOverride: Long?
     ) {
         val alertType = when (state.paceStatus) {
             PaceStatus.TOO_FAST -> AlertType.TOO_FAST
@@ -197,7 +200,8 @@ class AlertEngine(
         }
 
         val lastAlert = lastPaceAlertAtMillis
-        if (lastAlert != null && nowMillis - lastAlert < minPaceAlertIntervalMillis) {
+        val intervalMillis = minPaceAlertIntervalMillisOverride ?: minPaceAlertIntervalMillis
+        if (lastAlert != null && nowMillis - lastAlert < intervalMillis) {
             return
         }
 

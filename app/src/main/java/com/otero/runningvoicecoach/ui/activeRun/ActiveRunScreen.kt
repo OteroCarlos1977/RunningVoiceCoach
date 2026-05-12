@@ -84,7 +84,6 @@ fun ActiveRunScreen(
     val workoutPlan = remember(workoutPlanId) { ExampleWorkouts.findById(workoutPlanId) }
     val workoutEngine = remember { WorkoutEngine() }
     val alertEngine = remember { AlertEngine() }
-    val openAIClient = remember { OpenAIClient() }
     val voiceCoach = remember { AndroidVoiceCoach(context) }
     val locationTracker = remember { LocationTracker(context.applicationContext) }
     val historyRepository = remember { RunHistoryRepository(context.applicationContext) }
@@ -92,6 +91,9 @@ fun ActiveRunScreen(
     val userSettings by settingsRepository.settings.collectAsState(
         initial = com.otero.runningvoicecoach.data.settings.UserSettings()
     )
+    val openAIClient = remember(userSettings.developmentOpenAiApiKey) {
+        OpenAIClient(apiKey = userSettings.developmentOpenAiApiKey.ifBlank { com.otero.runningvoicecoach.BuildConfig.OPENAI_API_KEY })
+    }
     val coroutineScope = rememberCoroutineScope()
     val locationState by locationTracker.state.collectAsState()
     val latestLocationState by rememberUpdatedState(locationState)
@@ -118,7 +120,8 @@ fun ActiveRunScreen(
                 totalDurationSeconds = totalDurationSeconds,
                 stepDistanceMeters = stepDistanceMeters,
                 stepDurationSeconds = stepDurationSeconds,
-                currentPaceSecondsPerKm = currentPaceSecondsPerKm
+                currentPaceSecondsPerKm = currentPaceSecondsPerKm,
+                paceToleranceSeconds = userSettings.generalPaceToleranceSeconds
             )
         )
     }
@@ -183,14 +186,16 @@ fun ActiveRunScreen(
                 totalDurationSeconds = totalDurationSeconds,
                 stepDistanceMeters = stepDistanceMeters,
                 stepDurationSeconds = stepDurationSeconds,
-                currentPaceSecondsPerKm = currentPaceSecondsPerKm
+                currentPaceSecondsPerKm = currentPaceSecondsPerKm,
+                paceToleranceSeconds = userSettings.generalPaceToleranceSeconds
             )
             engineState = nextState
 
             val alerts = alertEngine.evaluate(
                 state = nextState,
                 totalDistanceMeters = totalDistanceMeters,
-                nowMillis = totalDurationSeconds * 1_000L
+                nowMillis = totalDurationSeconds * 1_000L,
+                minPaceAlertIntervalMillisOverride = userSettings.minAlertIntervalSeconds * 1_000L
             )
             alerts.forEachIndexed { index, alert ->
                 if (userSettings.voiceEnabled) {

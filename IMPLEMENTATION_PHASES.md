@@ -4,7 +4,7 @@ Este archivo resume el orden de trabajo definido en `PLAN_CODEX_RUNNING_VOICE_CO
 
 ## Estado actual
 
-Fase 15 completada:
+Fase 16 completada:
 
 - Proyecto Android base creado.
 - Modulo `app` configurado con Kotlin y Jetpack Compose.
@@ -64,6 +64,11 @@ Fase 15 completada:
 - `RunSummaryScreen` muestra ultima carrera, distancia, tiempo, ritmo promedio, conteo de bloques en objetivo/rapidos/lentos y detalle por bloque.
 - Al finalizar una carrera, la navegacion lleva al resumen y permite volver al inicio.
 - Se agregaron fondos `fondo1` a `fondo6` para seleccionar imagen de fondo en la actividad actual.
+- Fase 16: `SettingsScreen` permite activar/desactivar voz, activar/desactivar OpenAI, configurar frecuencia minima entre avisos, configurar tolerancia general de ritmo y guardar/borrar una API key de desarrollo.
+- La frecuencia minima de avisos configurada se aplica al `AlertEngine`.
+- La tolerancia general de ritmo configurada se aplica al `WorkoutEngine`.
+- La API key de desarrollo se usa para `OpenAIClient` si esta guardada; si no, se usa `BuildConfig.OPENAI_API_KEY`.
+- El campo de API key se muestra oculto y no se hardcodea en el codigo.
 - Pruebas unitarias agregadas para calculo de ritmo, motor de entrenamiento, motor de alertas y mensajes locales.
 - Validacion: `.\gradlew.bat testDebugUnitTest --no-daemon` pasa correctamente.
 - Validacion: `.\gradlew.bat assembleDebug --no-daemon` compila correctamente.
@@ -72,12 +77,14 @@ Pendiente conocido:
 
 - Persistencia de rutinas creadas por el usuario: el almacenamiento base esta listo, pero falta implementar el editor funcional de rutinas personalizadas.
 - La seleccion de fondo de actividad aun no persiste al reiniciar la app.
+- La API key guardada en DataStore es aceptable para desarrollo local; para produccion conviene usar almacenamiento cifrado o backend propio.
 
 ## Proximas fases
 
-1. Fase 16: configuracion completa y criterios MVP.
-2. Editor de rutinas personalizadas y persistencia de rutinas creadas.
-3. Persistir seleccion de fondo de actividad.
+1. Editor de rutinas personalizadas y persistencia de rutinas creadas.
+2. Persistir seleccion de fondo de actividad.
+3. Pulido visual profundo con dashboards finales.
+4. Prueba fisica larga de GPS, voz, pantalla apagada y bateria.
 
 ## Regla de continuidad
 

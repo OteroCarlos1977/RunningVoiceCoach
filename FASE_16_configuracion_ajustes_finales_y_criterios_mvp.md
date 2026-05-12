@@ -81,3 +81,43 @@ Al finalizar esta fase, indicá:
 2. Cómo probarlo.
 3. Errores conocidos o pendientes.
 4. Si la fase está lista para pasar a la siguiente.
+
+---
+
+## Cierre de fase
+
+Estado: completada.
+
+### Archivos creados o modificados
+
+- `app/src/main/java/com/otero/runningvoicecoach/data/settings/UserSettings.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/data/settings/UserSettingsRepository.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/domain/alert/AlertEngine.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/domain/workout/WorkoutEngine.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/ui/settings/SettingsScreen.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/ui/activeRun/ActiveRunScreen.kt`
+- `IMPLEMENTATION_PHASES.md`
+
+### Cómo probarlo
+
+1. Abrir `Configuracion`.
+2. Activar/desactivar voz.
+3. Activar/desactivar OpenAI.
+4. Cambiar frecuencia minima de avisos.
+5. Cambiar tolerancia general de ritmo.
+6. Guardar o borrar una API key de desarrollo.
+7. Iniciar una carrera y verificar que la app sigue funcionando con mensajes locales aunque OpenAI no tenga clave real.
+
+### Errores conocidos o pendientes
+
+- La API key guardada en DataStore sirve para desarrollo local. Para produccion conviene almacenamiento cifrado o backend propio.
+- La seleccion de fondo de actividad aun no persiste.
+- Falta editor real de rutinas personalizadas.
+- La validacion completa de pantalla apagada, GPS y bateria requiere prueba fisica en Android.
+
+### Validación
+
+- `.\gradlew.bat assembleDebug --no-daemon --stacktrace`: correcto.
+- `.\gradlew.bat testDebugUnitTest --no-daemon --stacktrace`: correcto.
+
+Con esto, el MVP tecnico queda cerrado para el flujo principal: seleccionar rutina, iniciar carrera, calcular ritmo, emitir alertas, hablar con fallback local, finalizar, guardar resumen y ver historial.

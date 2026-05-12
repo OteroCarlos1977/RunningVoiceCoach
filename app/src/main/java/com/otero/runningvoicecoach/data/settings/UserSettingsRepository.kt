@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.otero.runningvoicecoach.data.appDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,7 +17,8 @@ class UserSettingsRepository(
             voiceEnabled = preferences[VOICE_ENABLED] ?: true,
             openAiEnabled = preferences[OPEN_AI_ENABLED] ?: false,
             minAlertIntervalSeconds = preferences[MIN_ALERT_INTERVAL_SECONDS] ?: 30,
-            generalPaceToleranceSeconds = preferences[GENERAL_PACE_TOLERANCE_SECONDS] ?: 42
+            generalPaceToleranceSeconds = preferences[GENERAL_PACE_TOLERANCE_SECONDS] ?: 42,
+            developmentOpenAiApiKey = preferences[DEVELOPMENT_OPEN_AI_API_KEY].orEmpty()
         )
     }
 
@@ -44,10 +46,22 @@ class UserSettingsRepository(
         }
     }
 
+    suspend fun setDevelopmentOpenAiApiKey(apiKey: String) {
+        context.appDataStore.edit { preferences ->
+            val cleanedApiKey = apiKey.trim()
+            if (cleanedApiKey.isBlank()) {
+                preferences.remove(DEVELOPMENT_OPEN_AI_API_KEY)
+            } else {
+                preferences[DEVELOPMENT_OPEN_AI_API_KEY] = cleanedApiKey
+            }
+        }
+    }
+
     private companion object {
         val VOICE_ENABLED = booleanPreferencesKey("voice_enabled")
         val OPEN_AI_ENABLED = booleanPreferencesKey("open_ai_enabled")
         val MIN_ALERT_INTERVAL_SECONDS = intPreferencesKey("min_alert_interval_seconds")
         val GENERAL_PACE_TOLERANCE_SECONDS = intPreferencesKey("general_pace_tolerance_seconds")
+        val DEVELOPMENT_OPEN_AI_API_KEY = stringPreferencesKey("development_open_ai_api_key")
     }
 }

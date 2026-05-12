@@ -13,17 +13,21 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.otero.runningvoicecoach.data.settings.UserSettingsRepository
 import com.otero.runningvoicecoach.ui.components.AppScaffold
@@ -37,6 +41,9 @@ fun SettingsScreen(onBack: () -> Unit) {
         initial = com.otero.runningvoicecoach.data.settings.UserSettings()
     )
     val scope = rememberCoroutineScope()
+    var apiKeyDraft by remember(settings.developmentOpenAiApiKey) {
+        mutableStateOf(settings.developmentOpenAiApiKey)
+    }
 
     AppScaffold(
         title = "Configuracion",
@@ -65,10 +72,22 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
             SettingsSwitchCard(
                 title = "OpenAI",
-                subtitle = "Opcional. Todavia no integrado en carrera",
+                subtitle = "Opcional. Si falla, la app usa mensajes locales",
                 checked = settings.openAiEnabled,
                 onCheckedChange = { enabled ->
                     scope.launch { repository.setOpenAiEnabled(enabled) }
+                }
+            )
+            DevelopmentApiKeyCard(
+                apiKeyDraft = apiKeyDraft,
+                hasSavedApiKey = settings.developmentOpenAiApiKey.isNotBlank(),
+                onApiKeyChange = { apiKeyDraft = it },
+                onSave = {
+                    scope.launch { repository.setDevelopmentOpenAiApiKey(apiKeyDraft) }
+                },
+                onClear = {
+                    apiKeyDraft = ""
+                    scope.launch { repository.setDevelopmentOpenAiApiKey("") }
                 }
             )
             NumericSettingCard(
@@ -91,6 +110,63 @@ fun SettingsScreen(onBack: () -> Unit) {
                     scope.launch { repository.setGeneralPaceToleranceSeconds(settings.generalPaceToleranceSeconds + 5) }
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun DevelopmentApiKeyCard(
+    apiKeyDraft: String,
+    hasSavedApiKey: Boolean,
+    onApiKeyChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onClear: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "API key de desarrollo",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (hasSavedApiKey) "Hay una clave guardada localmente." else "Tambien puede venir desde OPENAI_API_KEY.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = apiKeyDraft,
+                onValueChange = onApiKeyChange,
+                singleLine = true,
+                label = { Text("OPENAI_API_KEY") },
+                visualTransformation = PasswordVisualTransformation()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onClear
+                ) {
+                    Text("Borrar")
+                }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onSave
+                ) {
+                    Text("Guardar")
+                }
+            }
         }
     }
 }

@@ -14,7 +14,8 @@ class WorkoutEngine {
         totalDurationSeconds: Long,
         stepDistanceMeters: Double,
         stepDurationSeconds: Long,
-        currentPaceSecondsPerKm: Int?
+        currentPaceSecondsPerKm: Int?,
+        paceToleranceSeconds: Int? = null
     ): WorkoutEngineState {
         val totalSteps = workoutPlan.steps.size
         val currentStep = workoutPlan.steps.getOrNull(currentStepIndex)
@@ -44,7 +45,7 @@ class WorkoutEngine {
         val paceStatus = PaceCalculator.comparePace(
             current = currentPaceSecondsPerKm,
             target = currentStep.targetPaceSecondsPerKm,
-            tolerance = currentStep.paceToleranceSeconds
+            tolerance = paceToleranceSeconds ?: currentStep.paceToleranceSeconds
         )
 
         return WorkoutEngineState(
