@@ -62,3 +62,37 @@ Al finalizar esta fase, indicá:
 2. Cómo probarlo.
 3. Errores conocidos o pendientes.
 4. Si la fase está lista para pasar a la siguiente.
+
+---
+
+## Cierre de fase
+
+Estado: completada.
+
+### Archivos creados o modificados
+
+- `app/src/main/java/com/otero/runningvoicecoach/data/session/RunSessionSummary.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/data/session/RunHistoryRepository.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/ui/activeRun/ActiveRunScreen.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/ui/summary/RunSummaryScreen.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/navigation/RunningVoiceCoachNavHost.kt`
+
+### Cómo probarlo
+
+1. Iniciar una rutina.
+2. Finalizarla manualmente o dejar que termine.
+3. Verificar que aparece `Resumen`.
+4. Revisar distancia total, tiempo total, ritmo promedio, conteo de bloques y detalle por bloque.
+5. Usar `Volver al inicio`.
+
+### Errores conocidos o pendientes
+
+- Las sesiones antiguas guardadas antes de esta fase pueden aparecer sin detalle por bloque.
+- El resumen no depende de OpenAI.
+
+### Validación
+
+- `.\gradlew.bat assembleDebug --no-daemon --stacktrace`: correcto.
+- `.\gradlew.bat testDebugUnitTest --no-daemon --stacktrace`: correcto.
+
+La fase está lista para pasar a la siguiente.

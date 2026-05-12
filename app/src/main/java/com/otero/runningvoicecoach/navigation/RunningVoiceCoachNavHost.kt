@@ -48,7 +48,11 @@ fun RunningVoiceCoachNavHost() {
             ActiveRunScreen(
                 workoutPlanId = backStackEntry.arguments?.getString(Screen.ActiveRun.ARG_WORKOUT_PLAN_ID),
                 onBack = { navController.popBackStack() },
-                onFinish = { navController.navigate(Screen.RunSummary.route) }
+                onFinish = {
+                    navController.navigate(Screen.RunSummary.route) {
+                        popUpTo(Screen.Home.route)
+                    }
+                }
             )
         }
         composable(Screen.RunSummary.route) {

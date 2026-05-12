@@ -59,3 +59,31 @@ Al finalizar esta fase, indicá:
 2. Cómo probarlo.
 3. Errores conocidos o pendientes.
 4. Si la fase está lista para pasar a la siguiente.
+
+---
+
+## Cierre de fase
+
+Estado: completada.
+
+### Archivos creados o modificados
+
+- `app/src/main/java/com/otero/runningvoicecoach/ui/activeRun/ActiveRunScreen.kt`
+
+### Cómo probarlo
+
+- Con OpenAI desactivado en Ajustes: iniciar una carrera y verificar que las alertas usen mensajes locales.
+- Con OpenAI activado pero sin API key: iniciar una carrera y verificar que la carrera no se detiene y vuelve a mensajes locales.
+- Con API key configurada en `OPENAI_API_KEY`: las alertas pueden solicitar mensajes IA.
+
+### Errores conocidos o pendientes
+
+- Sin API key real no se puede validar respuesta remota, pero el fallback local queda activo.
+- La llamada a OpenAI se ejecuta fuera del ciclo principal para no bloquear el cronometro.
+
+### Validación
+
+- `.\gradlew.bat assembleDebug --no-daemon --stacktrace`: correcto.
+- `.\gradlew.bat testDebugUnitTest --no-daemon --stacktrace`: correcto.
+
+La fase está lista para pasar a la siguiente.

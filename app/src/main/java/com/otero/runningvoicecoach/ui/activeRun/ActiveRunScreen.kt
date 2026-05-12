@@ -4,13 +4,21 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -25,6 +33,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -35,11 +44,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.data.session.RunHistoryRepository
 import com.otero.runningvoicecoach.data.session.RunSessionSummary
+import com.otero.runningvoicecoach.data.session.RunStepSummary
 import com.otero.runningvoicecoach.data.settings.UserSettingsRepository
 import com.otero.runningvoicecoach.domain.alert.AlertEngine
 import com.otero.runningvoicecoach.domain.alert.AlertPriority
@@ -51,6 +66,8 @@ import com.otero.runningvoicecoach.domain.workout.WorkoutEngine
 import com.otero.runningvoicecoach.domain.workout.WorkoutEngineState
 import com.otero.runningvoicecoach.location.LocationTracker
 import com.otero.runningvoicecoach.location.RunForegroundService
+import com.otero.runningvoicecoach.openai.OpenAIClient
+import com.otero.runningvoicecoach.openai.RunningAlertContext
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 import com.otero.runningvoicecoach.voice.AndroidVoiceCoach
 import kotlinx.coroutines.delay
@@ -67,6 +84,7 @@ fun ActiveRunScreen(
     val workoutPlan = remember(workoutPlanId) { ExampleWorkouts.findById(workoutPlanId) }
     val workoutEngine = remember { WorkoutEngine() }
     val alertEngine = remember { AlertEngine() }
+    val openAIClient = remember { OpenAIClient() }
     val voiceCoach = remember { AndroidVoiceCoach(context) }
     val locationTracker = remember { LocationTracker(context.applicationContext) }
     val historyRepository = remember { RunHistoryRepository(context.applicationContext) }
@@ -89,6 +107,8 @@ fun ActiveRunScreen(
     var stepDistanceMeters by rememberSaveable { mutableDoubleStateOf(0.0) }
     var lastGpsTotalDistanceMeters by rememberSaveable { mutableDoubleStateOf(0.0) }
     var currentPaceSecondsPerKm by rememberSaveable { mutableStateOf<Int?>(330) }
+    var selectedBackgroundIndex by rememberSaveable { mutableIntStateOf(0) }
+    val completedStepSummaries = remember { mutableStateListOf<RunStepSummary>() }
     var engineState by remember {
         mutableStateOf(
             workoutEngine.evaluate(
@@ -174,14 +194,38 @@ fun ActiveRunScreen(
             )
             alerts.forEachIndexed { index, alert ->
                 if (userSettings.voiceEnabled) {
-                    voiceCoach.speak(
-                        message = LocalMessageProvider.messageFor(alert),
-                        flush = index == 0 && alert.priority == AlertPriority.HIGH
-                    )
+                    coroutineScope.launch {
+                        val message = if (userSettings.openAiEnabled) {
+                            runCatching {
+                                openAIClient.generateRunningMessage(
+                                    RunningAlertContext.fromAlertEvent(
+                                        alertEvent = alert,
+                                        targetPaceSecondsPerKm = nextState.currentStep?.targetPaceSecondsPerKm,
+                                        currentPaceSecondsPerKm = currentPaceSecondsPerKm
+                                    )
+                                )
+                            }.getOrElse {
+                                LocalMessageProvider.messageFor(alert)
+                            }
+                        } else {
+                            LocalMessageProvider.messageFor(alert)
+                        }
+
+                        voiceCoach.speak(
+                            message = message,
+                            flush = index == 0 && alert.priority == AlertPriority.HIGH
+                        )
+                    }
                 }
             }
 
             if (nextState.isWorkoutFinished) {
+                appendStepSummaryIfNeeded(
+                    summaries = completedStepSummaries,
+                    state = nextState,
+                    stepDistanceMeters = stepDistanceMeters,
+                    stepDurationSeconds = stepDurationSeconds
+                )
                 historyRepository.saveSession(
                     RunSessionSummary(
                         id = UUID.randomUUID().toString(),
@@ -192,12 +236,19 @@ fun ActiveRunScreen(
                         averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
                             distanceMeters = totalDistanceMeters,
                             durationSeconds = totalDurationSeconds
-                        )
+                        ),
+                        stepSummaries = completedStepSummaries.toList()
                     )
                 )
                 isFinished = true
                 isRunning = false
             } else if (nextState.shouldMoveToNextStep) {
+                appendStepSummaryIfNeeded(
+                    summaries = completedStepSummaries,
+                    state = nextState,
+                    stepDistanceMeters = stepDistanceMeters,
+                    stepDurationSeconds = stepDurationSeconds
+                )
                 currentStepIndex += 1
                 stepDurationSeconds = 0L
                 stepDistanceMeters = 0.0
@@ -209,10 +260,26 @@ fun ActiveRunScreen(
         title = "Carrera activa",
         onBack = onBack
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+        ) {
+            Image(
+                painter = painterResource(id = activityBackgrounds[selectedBackgroundIndex].resId),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                alpha = 0.34f
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.72f))
+            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -226,6 +293,10 @@ fun ActiveRunScreen(
                     locationTracker.reset()
                     lastGpsTotalDistanceMeters = 0.0
                 }
+            )
+            ActivityBackgroundSelector(
+                selectedIndex = selectedBackgroundIndex,
+                onSelect = { selectedBackgroundIndex = it }
             )
             if (useGpsMode && locationState.lastError != null) {
                 Text(
@@ -315,6 +386,7 @@ fun ActiveRunScreen(
                             stepDistanceMeters = 0.0
                             lastGpsTotalDistanceMeters = 0.0
                             currentPaceSecondsPerKm = DEFAULT_SIMULATED_PACE_SECONDS_PER_KM
+                            completedStepSummaries.clear()
                             alertEngine.reset()
                             locationTracker.reset()
                             isFinished = false
@@ -375,6 +447,12 @@ fun ActiveRunScreen(
                     isRunning = false
                     isFinished = true
                     coroutineScope.launch {
+                        appendStepSummaryIfNeeded(
+                            summaries = completedStepSummaries,
+                            state = engineState,
+                            stepDistanceMeters = stepDistanceMeters,
+                            stepDurationSeconds = stepDurationSeconds
+                        )
                         historyRepository.saveSession(
                             RunSessionSummary(
                                 id = UUID.randomUUID().toString(),
@@ -385,7 +463,8 @@ fun ActiveRunScreen(
                                 averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
                                     distanceMeters = totalDistanceMeters,
                                     durationSeconds = totalDurationSeconds
-                                )
+                                ),
+                                stepSummaries = completedStepSummaries.toList()
                             )
                         )
                         onFinish()
@@ -393,6 +472,43 @@ fun ActiveRunScreen(
                 }
             ) {
                 Text("Finalizar")
+            }
+        }
+        }
+    }
+}
+
+@Composable
+private fun ActivityBackgroundSelector(
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    val scrollState = rememberScrollState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = "Fondo de actividad", style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scrollState),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            activityBackgrounds.forEachIndexed { index, background ->
+                val borderColor = if (index == selectedIndex) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    Color.Transparent
+                }
+                Image(
+                    painter = painterResource(id = background.resId),
+                    contentDescription = background.label,
+                    modifier = Modifier
+                        .size(width = 82.dp, height = 54.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(2.dp, borderColor, RoundedCornerShape(12.dp))
+                        .clickable { onSelect(index) },
+                    contentScale = ContentScale.Crop
+                )
             }
         }
     }
@@ -516,6 +632,54 @@ private fun PaceStatus.displayName(): String {
         PaceStatus.NO_TARGET -> "Sin objetivo"
     }
 }
+
+private fun appendStepSummaryIfNeeded(
+    summaries: MutableList<RunStepSummary>,
+    state: WorkoutEngineState,
+    stepDistanceMeters: Double,
+    stepDurationSeconds: Long
+) {
+    val step = state.currentStep ?: return
+    if (stepDurationSeconds <= 0L && stepDistanceMeters <= 0.0) {
+        return
+    }
+    if (summaries.size > state.currentStepIndex) {
+        return
+    }
+
+    val averagePace = PaceCalculator.calculateAveragePaceSecondsPerKm(
+        distanceMeters = stepDistanceMeters,
+        durationSeconds = stepDurationSeconds
+    )
+
+    summaries.add(
+        RunStepSummary(
+            stepName = step.name,
+            distanceMeters = stepDistanceMeters,
+            durationSeconds = stepDurationSeconds,
+            averagePaceSecondsPerKm = averagePace,
+            paceStatus = PaceCalculator.comparePace(
+                current = averagePace,
+                target = step.targetPaceSecondsPerKm,
+                tolerance = step.paceToleranceSeconds
+            )
+        )
+    )
+}
+
+private data class ActivityBackground(
+    val label: String,
+    val resId: Int
+)
+
+private val activityBackgrounds = listOf(
+    ActivityBackground("Fondo 1", R.drawable.fondo1),
+    ActivityBackground("Fondo 2", R.drawable.fondo2),
+    ActivityBackground("Fondo 3", R.drawable.fondo3),
+    ActivityBackground("Fondo 4", R.drawable.fondo4),
+    ActivityBackground("Fondo 5", R.drawable.fondo5),
+    ActivityBackground("Fondo 6", R.drawable.fondo6)
+)
 
 private const val METERS_PER_KILOMETER = 1000.0
 private const val DEFAULT_SIMULATED_PACE_SECONDS_PER_KM = 420

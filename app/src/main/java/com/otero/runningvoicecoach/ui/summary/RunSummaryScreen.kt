@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.otero.runningvoicecoach.data.session.RunHistoryRepository
 import com.otero.runningvoicecoach.data.session.RunSessionSummary
+import com.otero.runningvoicecoach.data.session.RunStepSummary
+import com.otero.runningvoicecoach.domain.model.PaceStatus
 import com.otero.runningvoicecoach.domain.pace.PaceCalculator
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 import java.text.SimpleDateFormat
@@ -48,7 +51,7 @@ fun RunSummaryScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Historial",
+                text = "Resumen",
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
             )
@@ -59,6 +62,21 @@ fun RunSummaryScreen(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.68f)
                 )
             } else {
+                val latestSession = sessions.first()
+                SessionCard(session = latestSession, title = "Ultima carrera")
+                StepComplianceSummary(session = latestSession)
+                StepSummaryList(steps = latestSession.stepSummaries)
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onBack
+                ) {
+                    Text("Volver al inicio")
+                }
+                Text(
+                    text = "Historial",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
                 sessions.forEach { session ->
                     SessionCard(session = session)
                 }
@@ -68,7 +86,10 @@ fun RunSummaryScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun SessionCard(session: RunSessionSummary) {
+private fun SessionCard(
+    session: RunSessionSummary,
+    title: String? = null
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -79,6 +100,14 @@ private fun SessionCard(session: RunSessionSummary) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (title != null) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             Text(
                 text = session.workoutName,
                 style = MaterialTheme.typography.titleLarge,
@@ -97,6 +126,96 @@ private fun SessionCard(session: RunSessionSummary) {
                 SummaryMetric("Tiempo", formatDuration(session.totalDurationSeconds))
                 SummaryMetric("Ritmo", PaceCalculator.formatPace(session.averagePaceSecondsPerKm))
             }
+        }
+    }
+}
+
+@Composable
+private fun StepComplianceSummary(session: RunSessionSummary) {
+    if (session.stepSummaries.isEmpty()) {
+        return
+    }
+
+    val withinTarget = session.stepSummaries.count { it.paceStatus == PaceStatus.WITHIN_TARGET }
+    val tooFast = session.stepSummaries.count { it.paceStatus == PaceStatus.TOO_FAST }
+    val tooSlow = session.stepSummaries.count { it.paceStatus == PaceStatus.TOO_SLOW }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            SummaryMetric("En objetivo", withinTarget.toString())
+            SummaryMetric("Rapidos", tooFast.toString())
+            SummaryMetric("Lentos", tooSlow.toString())
+        }
+    }
+}
+
+@Composable
+private fun StepSummaryList(steps: List<RunStepSummary>) {
+    if (steps.isEmpty()) {
+        Text(
+            text = "Esta sesion no tiene detalle por bloque.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.68f)
+        )
+        return
+    }
+
+    Text(
+        text = "Bloques",
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold
+    )
+    steps.forEachIndexed { index, step ->
+        StepSummaryCard(index = index, step = step)
+    }
+}
+
+@Composable
+private fun StepSummaryCard(index: Int, step: RunStepSummary) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "${index + 1}. ${step.stepName}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                SummaryMetric("Distancia", "%.2f km".format(step.distanceMeters / 1000.0))
+                SummaryMetric("Tiempo", formatDuration(step.durationSeconds))
+                SummaryMetric("Ritmo", PaceCalculator.formatPace(step.averagePaceSecondsPerKm))
+            }
+            Text(
+                text = step.paceStatus.summaryLabel(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = when (step.paceStatus) {
+                    PaceStatus.WITHIN_TARGET -> MaterialTheme.colorScheme.primary
+                    PaceStatus.TOO_FAST -> MaterialTheme.colorScheme.tertiary
+                    PaceStatus.TOO_SLOW -> MaterialTheme.colorScheme.error
+                    PaceStatus.NO_TARGET -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+                },
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -125,4 +244,13 @@ private fun formatDuration(totalSeconds: Long): String {
 
 private fun formatDate(timestampMillis: Long): String {
     return SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(timestampMillis))
+}
+
+private fun PaceStatus.summaryLabel(): String {
+    return when (this) {
+        PaceStatus.WITHIN_TARGET -> "Dentro del objetivo"
+        PaceStatus.TOO_FAST -> "Demasiado rapido"
+        PaceStatus.TOO_SLOW -> "Demasiado lento"
+        PaceStatus.NO_TARGET -> "Sin objetivo de ritmo"
+    }
 }

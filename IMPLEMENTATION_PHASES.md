@@ -4,7 +4,7 @@ Este archivo resume el orden de trabajo definido en `PLAN_CODEX_RUNNING_VOICE_CO
 
 ## Estado actual
 
-Fase 13 completada:
+Fase 15 completada:
 
 - Proyecto Android base creado.
 - Modulo `app` configurado con Kotlin y Jetpack Compose.
@@ -56,6 +56,14 @@ Fase 13 completada:
 - API key leida desde `BuildConfig.OPENAI_API_KEY`, configurada por propiedad Gradle o variable de entorno `OPENAI_API_KEY`; no esta hardcodeada.
 - Permiso `INTERNET` agregado para futura integracion de red.
 - Prueba unitaria agregada para validar el armado del contexto de alerta.
+- Fase 14: `ActiveRunScreen` integra `OpenAIClient` con `AlertEngine` y `VoiceCoach`.
+- Si OpenAI esta habilitado, los mensajes de alerta se intentan generar con IA.
+- Si OpenAI falla o no hay API key, se usa `LocalMessageProvider` sin detener la carrera.
+- Las llamadas a OpenAI se ejecutan fuera del ciclo principal del cronometro para no bloquear la actividad.
+- Fase 15: las sesiones guardadas incluyen resumen por bloque.
+- `RunSummaryScreen` muestra ultima carrera, distancia, tiempo, ritmo promedio, conteo de bloques en objetivo/rapidos/lentos y detalle por bloque.
+- Al finalizar una carrera, la navegacion lleva al resumen y permite volver al inicio.
+- Se agregaron fondos `fondo1` a `fondo6` para seleccionar imagen de fondo en la actividad actual.
 - Pruebas unitarias agregadas para calculo de ritmo, motor de entrenamiento, motor de alertas y mensajes locales.
 - Validacion: `.\gradlew.bat testDebugUnitTest --no-daemon` pasa correctamente.
 - Validacion: `.\gradlew.bat assembleDebug --no-daemon` compila correctamente.
@@ -63,14 +71,13 @@ Fase 13 completada:
 Pendiente conocido:
 
 - Persistencia de rutinas creadas por el usuario: el almacenamiento base esta listo, pero falta implementar el editor funcional de rutinas personalizadas.
-- OpenAI todavia no esta integrado al flujo de voz de la carrera; eso corresponde a la Fase 14.
+- La seleccion de fondo de actividad aun no persiste al reiniciar la app.
 
 ## Proximas fases
 
-1. Fase 14: integracion OpenAI con fallback local.
-2. Fase 15: resumen final.
-3. Fase 16: configuracion completa y criterios MVP.
-4. Editor de rutinas personalizadas y persistencia de rutinas creadas.
+1. Fase 16: configuracion completa y criterios MVP.
+2. Editor de rutinas personalizadas y persistencia de rutinas creadas.
+3. Persistir seleccion de fondo de actividad.
 
 ## Regla de continuidad
 
