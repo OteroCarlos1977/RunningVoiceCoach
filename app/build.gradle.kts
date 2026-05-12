@@ -3,6 +3,11 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+val openAiApiKey: String = providers.gradleProperty("OPENAI_API_KEY")
+    .orElse(providers.environmentVariable("OPENAI_API_KEY"))
+    .orElse("")
+    .get()
+
 android {
     namespace = "com.otero.runningvoicecoach"
     compileSdk = 35
@@ -15,6 +20,8 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "OPENAI_API_KEY", "\"${openAiApiKey.replace("\"", "\\\"")}\"")
+        buildConfigField("String", "OPENAI_MODEL", "\"gpt-5-mini\"")
     }
 
     buildTypes {
@@ -38,6 +45,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -52,6 +60,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.play.services.location)
+    implementation(libs.okhttp)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

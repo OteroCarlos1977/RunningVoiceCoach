@@ -70,3 +70,45 @@ Al finalizar esta fase, indicá:
 2. Cómo probarlo.
 3. Errores conocidos o pendientes.
 4. Si la fase está lista para pasar a la siguiente.
+
+---
+
+## Cierre de fase
+
+Estado: completada como cliente aislado, sin requerir API key real.
+
+### Archivos creados o modificados
+
+- `gradle/libs.versions.toml`
+- `app/build.gradle.kts`
+- `app/src/main/AndroidManifest.xml`
+- `app/src/main/java/com/otero/runningvoicecoach/openai/RunningAlertContext.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/openai/OpenAIClient.kt`
+- `app/src/main/java/com/otero/runningvoicecoach/openai/OpenAIClientException.kt`
+- `app/src/test/java/com/otero/runningvoicecoach/openai/RunningAlertContextTest.kt`
+
+### Cómo probarlo
+
+Sin API key real:
+
+- Ejecutar `.\gradlew.bat assembleDebug --no-daemon --stacktrace`.
+- Ejecutar `.\gradlew.bat testDebugUnitTest --no-daemon --stacktrace`.
+
+Con API key real, mas adelante:
+
+- Definir `OPENAI_API_KEY` como variable de entorno o propiedad Gradle.
+- Instanciar `OpenAIClient`.
+- Llamar `generateRunningMessage(context)` desde la integracion de Fase 14.
+
+### Errores conocidos o pendientes
+
+- El cliente no esta conectado todavia al flujo de voz de la app.
+- Si no hay API key, el cliente devuelve error controlado mediante `OpenAIClientException`.
+- No se envia ubicacion exacta ni datos personales; solo datos minimos de entrenamiento.
+
+### Validación
+
+- `.\gradlew.bat assembleDebug --no-daemon --stacktrace`: correcto.
+- `.\gradlew.bat testDebugUnitTest --no-daemon --stacktrace`: correcto.
+
+La fase está lista para pasar a la Fase 14.

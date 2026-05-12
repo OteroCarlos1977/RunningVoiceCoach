@@ -4,7 +4,7 @@ Este archivo resume el orden de trabajo definido en `PLAN_CODEX_RUNNING_VOICE_CO
 
 ## Estado actual
 
-Fase 12 completada:
+Fase 13 completada:
 
 - Proyecto Android base creado.
 - Modulo `app` configurado con Kotlin y Jetpack Compose.
@@ -50,6 +50,12 @@ Fase 12 completada:
 - `RunSummaryScreen` muestra historial local de carreras finalizadas.
 - `ActiveRunScreen` guarda la sesion al finalizar manualmente o al completar la rutina.
 - La navegacion permite iniciar una rutina seleccionada desde el catalogo y recuperarla por `workoutPlanId`.
+- Dependencia OkHttp agregada para llamadas HTTP.
+- `OpenAIClient` agregado usando `POST /v1/responses`, timeout corto y manejo de error controlado.
+- `RunningAlertContext` agregado para enviar solo datos minimos de la alerta: tipo, bloque, ritmos, diferencia y restante.
+- API key leida desde `BuildConfig.OPENAI_API_KEY`, configurada por propiedad Gradle o variable de entorno `OPENAI_API_KEY`; no esta hardcodeada.
+- Permiso `INTERNET` agregado para futura integracion de red.
+- Prueba unitaria agregada para validar el armado del contexto de alerta.
 - Pruebas unitarias agregadas para calculo de ritmo, motor de entrenamiento, motor de alertas y mensajes locales.
 - Validacion: `.\gradlew.bat testDebugUnitTest --no-daemon` pasa correctamente.
 - Validacion: `.\gradlew.bat assembleDebug --no-daemon` compila correctamente.
@@ -57,14 +63,14 @@ Fase 12 completada:
 Pendiente conocido:
 
 - Persistencia de rutinas creadas por el usuario: el almacenamiento base esta listo, pero falta implementar el editor funcional de rutinas personalizadas.
+- OpenAI todavia no esta integrado al flujo de voz de la carrera; eso corresponde a la Fase 14.
 
 ## Proximas fases
 
-1. Fase 13: OpenAI client.
-2. Fase 14: integracion OpenAI con fallback local.
-3. Fase 15: resumen final.
-4. Fase 16: configuracion completa y criterios MVP.
-5. Editor de rutinas personalizadas y persistencia de rutinas creadas.
+1. Fase 14: integracion OpenAI con fallback local.
+2. Fase 15: resumen final.
+3. Fase 16: configuracion completa y criterios MVP.
+4. Editor de rutinas personalizadas y persistencia de rutinas creadas.
 
 ## Regla de continuidad
 
