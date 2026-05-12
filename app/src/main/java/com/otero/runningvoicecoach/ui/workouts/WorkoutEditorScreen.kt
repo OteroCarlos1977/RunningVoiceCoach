@@ -2,6 +2,7 @@ package com.otero.runningvoicecoach.ui.workouts
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,14 +12,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,8 +53,27 @@ fun WorkoutEditorScreen(
 
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var routineMode by remember { mutableStateOf(RoutineMode.CONTINUOUS) }
     var error by remember { mutableStateOf<String?>(null) }
-    val steps = remember { mutableStateListOf(EditorStepDraft()) }
+    var continuousBlockCount by remember { mutableIntStateOf(2) }
+    val continuousBlocks = remember {
+        mutableStateListOf(
+            ContinuousBlockDraft(name = "Fondo suave", distanceKm = "4", paceMinutes = "7", paceSeconds = "30"),
+            ContinuousBlockDraft(name = "Ritmo medio", distanceKm = "2", paceMinutes = "6", paceSeconds = "30")
+        )
+    }
+    var intervalDraft by remember { mutableStateOf(IntervalRoutineDraft()) }
+
+    fun syncContinuousBlocks(count: Int) {
+        val safeCount = count.coerceIn(1, 6)
+        continuousBlockCount = safeCount
+        while (continuousBlocks.size < safeCount) {
+            continuousBlocks += ContinuousBlockDraft(name = "Bloque ${continuousBlocks.size + 1}")
+        }
+        while (continuousBlocks.size > safeCount) {
+            continuousBlocks.removeAt(continuousBlocks.lastIndex)
+        }
+    }
 
     AppScaffold(
         title = "Crear rutina",
@@ -69,36 +92,70 @@ fun WorkoutEditorScreen(
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold
             )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                label = { Text("Nombre") }
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Objetivo o descripcion") }
+            Text(
+                text = "Defini la estructura y la app arma los bloques.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.68f)
             )
 
-            steps.forEachIndexed { index, step ->
-                StepEditorCard(
-                    index = index,
-                    step = step,
-                    canRemove = steps.size > 1,
-                    onUpdate = { updated -> steps[index] = updated },
-                    onRemove = { steps.removeAt(index) }
+            SectionCard {
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    label = { Text("Nombre de la rutina") }
+                )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Objetivo o descripcion") }
                 )
             }
 
-            OutlinedButton(
+            Text(
+                text = "Estructura",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { steps += EditorStepDraft(name = "Bloque ${steps.size + 1}") }
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Agregar bloque")
+                ModeButton(
+                    modifier = Modifier.weight(1f),
+                    text = "Bloques continuos",
+                    selected = routineMode == RoutineMode.CONTINUOUS,
+                    onClick = { routineMode = RoutineMode.CONTINUOUS }
+                )
+                ModeButton(
+                    modifier = Modifier.weight(1f),
+                    text = "Pasadas con descanso",
+                    selected = routineMode == RoutineMode.INTERVALS,
+                    onClick = { routineMode = RoutineMode.INTERVALS }
+                )
             }
+
+            when (routineMode) {
+                RoutineMode.CONTINUOUS -> ContinuousRoutineEditor(
+                    blockCount = continuousBlockCount,
+                    blocks = continuousBlocks,
+                    onBlockCountChange = ::syncContinuousBlocks,
+                    onBlockChange = { index, block -> continuousBlocks[index] = block }
+                )
+
+                RoutineMode.INTERVALS -> IntervalRoutineEditor(
+                    draft = intervalDraft,
+                    onDraftChange = { intervalDraft = it }
+                )
+            }
+
+            RoutinePreview(
+                mode = routineMode,
+                continuousBlocks = continuousBlocks,
+                intervalDraft = intervalDraft
+            )
 
             error?.let {
                 Text(
@@ -110,11 +167,14 @@ fun WorkoutEditorScreen(
 
             Button(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
                 onClick = {
                     val workout = buildWorkoutOrNull(
                         name = name,
                         description = description,
-                        steps = steps,
+                        mode = routineMode,
+                        continuousBlocks = continuousBlocks,
+                        intervalDraft = intervalDraft,
                         onError = { error = it }
                     )
                     if (workout != null) {
@@ -132,13 +192,313 @@ fun WorkoutEditorScreen(
 }
 
 @Composable
-private fun StepEditorCard(
-    index: Int,
-    step: EditorStepDraft,
-    canRemove: Boolean,
-    onUpdate: (EditorStepDraft) -> Unit,
-    onRemove: () -> Unit
+private fun ContinuousRoutineEditor(
+    blockCount: Int,
+    blocks: List<ContinuousBlockDraft>,
+    onBlockCountChange: (Int) -> Unit,
+    onBlockChange: (Int, ContinuousBlockDraft) -> Unit
 ) {
+    SectionCard {
+        StepperRow(
+            label = "Cantidad de bloques continuos",
+            value = blockCount.toString(),
+            onDecrease = { onBlockCountChange(blockCount - 1) },
+            onIncrease = { onBlockCountChange(blockCount + 1) }
+        )
+        Text(
+            text = "Ejemplo: 4 km suave + 2 km ritmo medio.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+        )
+    }
+
+    blocks.forEachIndexed { index, block ->
+        ContinuousBlockCard(
+            index = index,
+            block = block,
+            onChange = { onBlockChange(index, it) }
+        )
+    }
+}
+
+@Composable
+private fun ContinuousBlockCard(
+    index: Int,
+    block: ContinuousBlockDraft,
+    onChange: (ContinuousBlockDraft) -> Unit
+) {
+    SectionCard {
+        Text(
+            text = "Bloque ${index + 1}",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = block.name,
+            onValueChange = { onChange(block.copy(name = it)) },
+            singleLine = true,
+            label = { Text("Nombre del bloque") }
+        )
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = block.distanceKm,
+            onValueChange = { onChange(block.copy(distanceKm = it.onlyDecimal())) },
+            singleLine = true,
+            label = { Text("Distancia en km") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+        )
+        PaceFields(
+            paceMinutes = block.paceMinutes,
+            paceSeconds = block.paceSeconds,
+            toleranceSeconds = block.toleranceSeconds,
+            onPaceMinutesChange = { onChange(block.copy(paceMinutes = it.onlyDigits())) },
+            onPaceSecondsChange = { onChange(block.copy(paceSeconds = it.onlyDigits().take(2))) },
+            onToleranceChange = { onChange(block.copy(toleranceSeconds = it.onlyDigits())) }
+        )
+    }
+}
+
+@Composable
+private fun IntervalRoutineEditor(
+    draft: IntervalRoutineDraft,
+    onDraftChange: (IntervalRoutineDraft) -> Unit
+) {
+    SectionCard {
+        StepperRow(
+            label = "Cantidad de pasadas",
+            value = draft.repetitions,
+            onDecrease = { onDraftChange(draft.copy(repetitions = draft.repetitions.decrementText(1))) },
+            onIncrease = { onDraftChange(draft.copy(repetitions = draft.repetitions.incrementText())) }
+        )
+        Text(
+            text = "Ejemplo: 4 pasadas de 1 km con 3 min de descanso.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+        )
+    }
+
+    SectionCard {
+        Text(
+            text = "Pasada",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = draft.intervalDistanceKm,
+            onValueChange = { onDraftChange(draft.copy(intervalDistanceKm = it.onlyDecimal())) },
+            singleLine = true,
+            label = { Text("Distancia de cada pasada en km") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+        )
+        PaceFields(
+            paceMinutes = draft.intervalPaceMinutes,
+            paceSeconds = draft.intervalPaceSeconds,
+            toleranceSeconds = draft.intervalToleranceSeconds,
+            onPaceMinutesChange = { onDraftChange(draft.copy(intervalPaceMinutes = it.onlyDigits())) },
+            onPaceSecondsChange = { onDraftChange(draft.copy(intervalPaceSeconds = it.onlyDigits().take(2))) },
+            onToleranceChange = { onDraftChange(draft.copy(intervalToleranceSeconds = it.onlyDigits())) }
+        )
+    }
+
+    SectionCard {
+        Text(
+            text = "Descanso",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ModeButton(
+                modifier = Modifier.weight(1f),
+                text = "Con descanso",
+                selected = draft.hasRecovery,
+                onClick = { onDraftChange(draft.copy(hasRecovery = true)) }
+            )
+            ModeButton(
+                modifier = Modifier.weight(1f),
+                text = "Sin descanso",
+                selected = !draft.hasRecovery,
+                onClick = { onDraftChange(draft.copy(hasRecovery = false)) }
+            )
+        }
+        if (draft.hasRecovery) {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = draft.recoveryMinutes,
+                onValueChange = { onDraftChange(draft.copy(recoveryMinutes = it.onlyDigits())) },
+                singleLine = true,
+                label = { Text("Descanso en minutos") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+            PaceFields(
+                paceMinutes = draft.recoveryPaceMinutes,
+                paceSeconds = draft.recoveryPaceSeconds,
+                toleranceSeconds = draft.recoveryToleranceSeconds,
+                onPaceMinutesChange = { onDraftChange(draft.copy(recoveryPaceMinutes = it.onlyDigits())) },
+                onPaceSecondsChange = { onDraftChange(draft.copy(recoveryPaceSeconds = it.onlyDigits().take(2))) },
+                onToleranceChange = { onDraftChange(draft.copy(recoveryToleranceSeconds = it.onlyDigits())) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PaceFields(
+    paceMinutes: String,
+    paceSeconds: String,
+    toleranceSeconds: String,
+    onPaceMinutesChange: (String) -> Unit,
+    onPaceSecondsChange: (String) -> Unit,
+    onToleranceChange: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        OutlinedTextField(
+            modifier = Modifier.weight(1f),
+            value = paceMinutes,
+            onValueChange = onPaceMinutesChange,
+            singleLine = true,
+            label = { Text("Min/km") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+        OutlinedTextField(
+            modifier = Modifier.weight(1f),
+            value = paceSeconds,
+            onValueChange = onPaceSecondsChange,
+            singleLine = true,
+            label = { Text("Seg") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+    }
+    OutlinedTextField(
+        modifier = Modifier.fillMaxWidth(),
+        value = toleranceSeconds,
+        onValueChange = onToleranceChange,
+        singleLine = true,
+        label = { Text("Tolerancia segundos por km") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    )
+}
+
+@Composable
+private fun RoutinePreview(
+    mode: RoutineMode,
+    continuousBlocks: List<ContinuousBlockDraft>,
+    intervalDraft: IntervalRoutineDraft
+) {
+    SectionCard {
+        Text(
+            text = "Vista previa",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        val lines: List<String> = when (mode) {
+            RoutineMode.CONTINUOUS -> continuousBlocks.mapIndexed { index, block ->
+                "${index + 1}. ${block.name.ifBlank { "Bloque ${index + 1}" }} - ${block.distanceKm.ifBlank { "0" }} km a ${block.paceMinutes}:${block.paceSeconds.padStart(2, '0')} /km"
+            }
+
+            RoutineMode.INTERVALS -> buildList {
+                val repetitions = intervalDraft.repetitions.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                repeat(repetitions) { index ->
+                    add("${index + 1}. Pasada ${index + 1} - ${intervalDraft.intervalDistanceKm.ifBlank { "0" }} km a ${intervalDraft.intervalPaceMinutes}:${intervalDraft.intervalPaceSeconds.padStart(2, '0')} /km")
+                    if (intervalDraft.hasRecovery && index < repetitions - 1) {
+                        add("   Descanso ${intervalDraft.recoveryMinutes.ifBlank { "0" }} min")
+                    }
+                }
+            }
+        }
+        lines.take(10).forEach { line ->
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.76f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepperRow(
+    label: String,
+    value: String,
+    onDecrease: () -> Unit,
+    onIncrease: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = onDecrease
+            ) {
+                Text("-")
+            }
+            Surface(
+                modifier = Modifier.weight(2f),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Text(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    text = value,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = onIncrease
+            ) {
+                Text("+")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModeButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = if (selected) {
+        ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+    } else {
+        ButtonDefaults.outlinedButtonColors()
+    }
+
+    if (selected) {
+        Button(
+            modifier = modifier,
+            shape = RoundedCornerShape(14.dp),
+            colors = colors,
+            onClick = onClick
+        ) {
+            Text(text)
+        }
+    } else {
+        OutlinedButton(
+            modifier = modifier,
+            shape = RoundedCornerShape(14.dp),
+            onClick = onClick
+        ) {
+            Text(text)
+        }
+    }
+}
+
+@Composable
+private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -147,129 +507,44 @@ private fun StepEditorCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Bloque ${index + 1}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = step.name,
-                onValueChange = { onUpdate(step.copy(name = it)) },
-                singleLine = true,
-                label = { Text("Nombre del bloque") }
-            )
-            ChoiceRow(
-                label = "Tipo",
-                value = step.stepType.displayName(),
-                onPrevious = { onUpdate(step.copy(stepType = step.stepType.previous())) },
-                onNext = { onUpdate(step.copy(stepType = step.stepType.next())) }
-            )
-            ChoiceRow(
-                label = "Objetivo",
-                value = step.targetType.displayName(),
-                onPrevious = { onUpdate(step.copy(targetType = step.targetType.toggle())) },
-                onNext = { onUpdate(step.copy(targetType = step.targetType.toggle())) }
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = step.targetValue,
-                onValueChange = { onUpdate(step.copy(targetValue = it.onlyDigits())) },
-                singleLine = true,
-                label = {
-                    Text(if (step.targetType == TargetType.TIME_SECONDS) "Duracion en minutos" else "Distancia en kilometros")
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = step.paceMinutes,
-                onValueChange = { onUpdate(step.copy(paceMinutes = it.onlyDigits())) },
-                singleLine = true,
-                label = { Text("Ritmo objetivo minutos por km") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = step.paceSeconds,
-                onValueChange = { onUpdate(step.copy(paceSeconds = it.onlyDigits().take(2))) },
-                singleLine = true,
-                label = { Text("Ritmo objetivo segundos") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = step.toleranceSeconds,
-                onValueChange = { onUpdate(step.copy(toleranceSeconds = it.onlyDigits())) },
-                singleLine = true,
-                label = { Text("Tolerancia segundos por km") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-            if (canRemove) {
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onRemove
-                ) {
-                    Text("Quitar bloque")
-                }
-            }
-        }
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
     }
 }
 
-@Composable
-private fun ChoiceRow(
-    label: String,
-    value: String,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = label, style = MaterialTheme.typography.bodyMedium)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                onClick = onPrevious
-            ) {
-                Text("<")
-            }
-            Text(
-                modifier = Modifier
-                    .weight(2f)
-                    .padding(vertical = 10.dp),
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                onClick = onNext
-            ) {
-                Text(">")
-            }
-        }
-    }
+private enum class RoutineMode {
+    CONTINUOUS,
+    INTERVALS
 }
 
-private data class EditorStepDraft(
-    val name: String = "Bloque 1",
-    val stepType: StepType = StepType.EASY,
-    val targetType: TargetType = TargetType.TIME_SECONDS,
-    val targetValue: String = "5",
+private data class ContinuousBlockDraft(
+    val name: String = "Bloque",
+    val distanceKm: String = "1",
     val paceMinutes: String = "7",
     val paceSeconds: String = "00",
     val toleranceSeconds: String = "42"
 )
 
+private data class IntervalRoutineDraft(
+    val repetitions: String = "4",
+    val intervalDistanceKm: String = "1",
+    val intervalPaceMinutes: String = "6",
+    val intervalPaceSeconds: String = "00",
+    val intervalToleranceSeconds: String = "30",
+    val hasRecovery: Boolean = true,
+    val recoveryMinutes: String = "3",
+    val recoveryPaceMinutes: String = "8",
+    val recoveryPaceSeconds: String = "00",
+    val recoveryToleranceSeconds: String = "60"
+)
+
 private fun buildWorkoutOrNull(
     name: String,
     description: String,
-    steps: List<EditorStepDraft>,
+    mode: RoutineMode,
+    continuousBlocks: List<ContinuousBlockDraft>,
+    intervalDraft: IntervalRoutineDraft,
     onError: (String) -> Unit
 ): WorkoutPlan? {
     val cleanName = name.trim()
@@ -278,11 +553,13 @@ private fun buildWorkoutOrNull(
         return null
     }
 
-    val workoutSteps = steps.mapIndexedNotNull { index, draft ->
-        draft.toWorkoutStepOrNull(index)
+    val steps = when (mode) {
+        RoutineMode.CONTINUOUS -> buildContinuousSteps(continuousBlocks)
+        RoutineMode.INTERVALS -> buildIntervalSteps(intervalDraft)
     }
-    if (workoutSteps.size != steps.size) {
-        onError("Revisa bloques: objetivo, ritmo y tolerancia deben ser numeros validos.")
+
+    if (steps == null || steps.isEmpty()) {
+        onError("Revisa los datos: distancia, ritmo y tolerancia deben ser validos.")
         return null
     }
 
@@ -290,68 +567,94 @@ private fun buildWorkoutOrNull(
         id = "custom-${UUID.randomUUID()}",
         name = cleanName,
         description = description.trim().takeIf { it.isNotBlank() },
-        steps = workoutSteps
+        steps = steps
     )
 }
 
-private fun EditorStepDraft.toWorkoutStepOrNull(index: Int): WorkoutStep? {
-    val rawTarget = targetValue.toDoubleOrNull()?.takeIf { it > 0.0 } ?: return null
-    val target = when (targetType) {
-        TargetType.TIME_SECONDS -> rawTarget * 60.0
-        TargetType.DISTANCE_METERS -> rawTarget * 1000.0
+private fun buildContinuousSteps(blocks: List<ContinuousBlockDraft>): List<WorkoutStep>? {
+    return blocks.mapIndexed { index, block ->
+        val pace = parsePace(block.paceMinutes, block.paceSeconds) ?: return null
+        val distanceMeters = block.distanceKm.toDoubleOrNull()?.takeIf { it > 0.0 }?.times(1000.0) ?: return null
+        val tolerance = block.toleranceSeconds.toIntOrNull()?.coerceAtLeast(0) ?: return null
+
+        WorkoutStep(
+            id = "continuous-${index + 1}-${UUID.randomUUID()}",
+            name = block.name.trim().ifBlank { "Bloque ${index + 1}" },
+            type = if (index == 0) StepType.EASY else StepType.TEMPO,
+            targetType = TargetType.DISTANCE_METERS,
+            targetValue = distanceMeters,
+            targetPaceSecondsPerKm = pace,
+            paceToleranceSeconds = tolerance
+        )
     }
-    val minutes = paceMinutes.toIntOrNull() ?: return null
-    val seconds = paceSeconds.toIntOrNull() ?: return null
-    if (seconds !in 0..59) {
+}
+
+private fun buildIntervalSteps(draft: IntervalRoutineDraft): List<WorkoutStep>? {
+    val repetitions = draft.repetitions.toIntOrNull()?.coerceIn(1, 20) ?: return null
+    val intervalDistanceMeters = draft.intervalDistanceKm.toDoubleOrNull()
+        ?.takeIf { it > 0.0 }
+        ?.times(1000.0)
+        ?: return null
+    val intervalPace = parsePace(draft.intervalPaceMinutes, draft.intervalPaceSeconds) ?: return null
+    val intervalTolerance = draft.intervalToleranceSeconds.toIntOrNull()?.coerceAtLeast(0) ?: return null
+    val recoverySeconds = draft.recoveryMinutes.toDoubleOrNull()?.takeIf { it > 0.0 }?.times(60.0)
+    val recoveryPace = parsePace(draft.recoveryPaceMinutes, draft.recoveryPaceSeconds) ?: return null
+    val recoveryTolerance = draft.recoveryToleranceSeconds.toIntOrNull()?.coerceAtLeast(0) ?: return null
+
+    return buildList {
+        repeat(repetitions) { index ->
+            val number = index + 1
+            add(
+                WorkoutStep(
+                    id = "interval-$number-${UUID.randomUUID()}",
+                    name = "Pasada $number",
+                    type = StepType.INTERVAL,
+                    targetType = TargetType.DISTANCE_METERS,
+                    targetValue = intervalDistanceMeters,
+                    targetPaceSecondsPerKm = intervalPace,
+                    paceToleranceSeconds = intervalTolerance
+                )
+            )
+            if (draft.hasRecovery && index < repetitions - 1) {
+                add(
+                    WorkoutStep(
+                        id = "recovery-$number-${UUID.randomUUID()}",
+                        name = "Descanso $number",
+                        type = StepType.RECOVERY,
+                        targetType = TargetType.TIME_SECONDS,
+                        targetValue = recoverySeconds ?: return null,
+                        targetPaceSecondsPerKm = recoveryPace,
+                        paceToleranceSeconds = recoveryTolerance
+                    )
+                )
+            }
+        }
+    }
+}
+
+private fun parsePace(minutes: String, seconds: String): Int? {
+    val min = minutes.toIntOrNull() ?: return null
+    val sec = seconds.toIntOrNull() ?: return null
+    if (min < 0 || sec !in 0..59) {
         return null
     }
-
-    return WorkoutStep(
-        id = "step-${index + 1}-${UUID.randomUUID()}",
-        name = name.trim().ifBlank { "Bloque ${index + 1}" },
-        type = stepType,
-        targetType = targetType,
-        targetValue = target,
-        targetPaceSecondsPerKm = minutes * 60 + seconds,
-        paceToleranceSeconds = toleranceSeconds.toIntOrNull()?.coerceAtLeast(0) ?: return null
-    )
+    return min * 60 + sec
 }
 
 private fun String.onlyDigits(): String {
     return filter { it.isDigit() }
 }
 
-private fun StepType.displayName(): String {
-    return when (this) {
-        StepType.WARMUP -> "Entrada en calor"
-        StepType.EASY -> "Suave"
-        StepType.INTERVAL -> "Intervalo"
-        StepType.RECOVERY -> "Recuperacion"
-        StepType.TEMPO -> "Tempo"
-        StepType.COOLDOWN -> "Vuelta a la calma"
+private fun String.onlyDecimal(): String {
+    return filterIndexed { index, char ->
+        char.isDigit() || (char == '.' && !take(index).contains('.'))
     }
 }
 
-private fun StepType.next(): StepType {
-    val values = StepType.entries
-    return values[(ordinal + 1) % values.size]
+private fun String.incrementText(): String {
+    return ((toIntOrNull() ?: 0) + 1).toString()
 }
 
-private fun StepType.previous(): StepType {
-    val values = StepType.entries
-    return values[(ordinal - 1 + values.size) % values.size]
-}
-
-private fun TargetType.displayName(): String {
-    return when (this) {
-        TargetType.TIME_SECONDS -> "Tiempo"
-        TargetType.DISTANCE_METERS -> "Distancia"
-    }
-}
-
-private fun TargetType.toggle(): TargetType {
-    return when (this) {
-        TargetType.TIME_SECONDS -> TargetType.DISTANCE_METERS
-        TargetType.DISTANCE_METERS -> TargetType.TIME_SECONDS
-    }
+private fun String.decrementText(minimum: Int): String {
+    return ((toIntOrNull() ?: minimum) - 1).coerceAtLeast(minimum).toString()
 }
