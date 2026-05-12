@@ -23,12 +23,19 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.otero.runningvoicecoach.data.workout.CustomWorkoutRepository
+import com.otero.runningvoicecoach.domain.model.TargetType
+import com.otero.runningvoicecoach.domain.model.WorkoutPlan
 import com.otero.runningvoicecoach.domain.workout.ExampleWorkouts
 import com.otero.runningvoicecoach.domain.workout.RoutinePreset
 import com.otero.runningvoicecoach.ui.components.AppScaffold
@@ -40,6 +47,10 @@ fun WorkoutListScreen(
     onSelectWorkout: (String) -> Unit,
     routines: List<RoutinePreset> = ExampleWorkouts.presets
 ) {
+    val context = LocalContext.current
+    val repository = remember { CustomWorkoutRepository(context.applicationContext) }
+    val customWorkouts by repository.workouts.collectAsState(initial = emptyList())
+
     AppScaffold(
         title = "Rutinas",
         onBack = onBack
@@ -76,11 +87,85 @@ fun WorkoutListScreen(
                 Text("Programar rutina especial")
             }
 
+            if (customWorkouts.isNotEmpty()) {
+                Text(
+                    text = "Tus rutinas",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                customWorkouts.forEach { workout ->
+                    CustomWorkoutCard(
+                        workout = workout,
+                        onSelectWorkout = onSelectWorkout
+                    )
+                }
+            }
+
+            Text(
+                text = "Rutinas base",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
             routines.forEach { routine ->
                 RoutinePresetCard(
                     routine = routine,
                     onSelectWorkout = onSelectWorkout
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CustomWorkoutCard(
+    workout: WorkoutPlan,
+    onSelectWorkout: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = workout.name,
+                style = MaterialTheme.typography.titleLarge,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.Bold
+            )
+            workout.description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                )
+            }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                InfoPill(text = "${workout.steps.size} bloques")
+                InfoPill(text = workout.estimatedDurationLabel())
+                InfoPill(text = "Personalizada", color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f), contentColor = MaterialTheme.colorScheme.tertiary)
+            }
+            workout.steps.take(4).forEach { step ->
+                Text(
+                    text = "• ${step.name}: ${step.targetLabel()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                )
+            }
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                onClick = { onSelectWorkout(workout.id) }
+            ) {
+                Text("Seleccionar")
             }
         }
     }
@@ -203,5 +288,25 @@ private fun String.accentColor(): Color {
         "Intermedio" -> Color(0xFF1565C0)
         "Suave" -> Color(0xFF00A8A8)
         else -> Color(0xFF1565C0)
+    }
+}
+
+private fun WorkoutPlan.estimatedDurationLabel(): String {
+    val seconds = steps
+        .filter { it.targetType == TargetType.TIME_SECONDS }
+        .sumOf { it.targetValue }
+        .toLong()
+
+    return if (seconds > 0L) {
+        "${seconds / 60L} min"
+    } else {
+        "Por distancia"
+    }
+}
+
+private fun com.otero.runningvoicecoach.domain.model.WorkoutStep.targetLabel(): String {
+    return when (targetType) {
+        TargetType.TIME_SECONDS -> "${targetValue.toLong() / 60L} min"
+        TargetType.DISTANCE_METERS -> "%.2f km".format(targetValue / 1000.0)
     }
 }

@@ -56,6 +56,7 @@ import com.otero.runningvoicecoach.data.session.RunHistoryRepository
 import com.otero.runningvoicecoach.data.session.RunSessionSummary
 import com.otero.runningvoicecoach.data.session.RunStepSummary
 import com.otero.runningvoicecoach.data.settings.UserSettingsRepository
+import com.otero.runningvoicecoach.data.workout.CustomWorkoutRepository
 import com.otero.runningvoicecoach.domain.alert.AlertEngine
 import com.otero.runningvoicecoach.domain.alert.AlertPriority
 import com.otero.runningvoicecoach.domain.alert.LocalMessageProvider
@@ -81,7 +82,11 @@ fun ActiveRunScreen(
     onFinish: () -> Unit
 ) {
     val context = LocalContext.current
-    val workoutPlan = remember(workoutPlanId) { ExampleWorkouts.findById(workoutPlanId) }
+    val customWorkoutRepository = remember { CustomWorkoutRepository(context.applicationContext) }
+    val customWorkouts by customWorkoutRepository.workouts.collectAsState(initial = emptyList())
+    val workoutPlan = remember(workoutPlanId, customWorkouts) {
+        customWorkouts.firstOrNull { it.id == workoutPlanId } ?: ExampleWorkouts.findById(workoutPlanId)
+    }
     val workoutEngine = remember { WorkoutEngine() }
     val alertEngine = remember { AlertEngine() }
     val voiceCoach = remember { AndroidVoiceCoach(context) }
@@ -111,7 +116,7 @@ fun ActiveRunScreen(
     var currentPaceSecondsPerKm by rememberSaveable { mutableStateOf<Int?>(330) }
     var selectedBackgroundIndex by rememberSaveable { mutableIntStateOf(0) }
     val completedStepSummaries = remember { mutableStateListOf<RunStepSummary>() }
-    var engineState by remember {
+    var engineState by remember(workoutPlan.id) {
         mutableStateOf(
             workoutEngine.evaluate(
                 workoutPlan = workoutPlan,

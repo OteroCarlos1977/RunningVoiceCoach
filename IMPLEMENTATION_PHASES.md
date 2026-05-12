@@ -75,15 +75,19 @@ Fase 16 completada:
 
 Pendiente conocido:
 
-- Persistencia de rutinas creadas por el usuario: el almacenamiento base esta listo, pero falta implementar el editor funcional de rutinas personalizadas.
+- Editor funcional de rutinas personalizadas agregado.
+- `CustomWorkoutRepository` guarda rutinas creadas en DataStore.
+- `WorkoutEditorScreen` permite crear nombre, descripcion y bloques por tiempo o distancia con ritmo objetivo y tolerancia.
+- `WorkoutListScreen` muestra rutinas personalizadas junto al catalogo base.
+- `ActiveRunScreen` puede iniciar rutinas personalizadas recuperadas por id.
 - La seleccion de fondo de actividad aun no persiste al reiniciar la app.
 - La API key guardada en DataStore es aceptable para desarrollo local; para produccion conviene usar almacenamiento cifrado o backend propio.
 
 ## Proximas fases
 
-1. Editor de rutinas personalizadas y persistencia de rutinas creadas.
-2. Persistir seleccion de fondo de actividad.
-3. Pulido visual profundo con dashboards finales.
+1. Persistir seleccion de fondo de actividad.
+2. Pulido visual profundo con dashboards finales.
+3. Edicion y borrado de rutinas personalizadas existentes.
 4. Prueba fisica larga de GPS, voz, pantalla apagada y bateria.
 
 ## Regla de continuidad

@@ -39,7 +39,10 @@ fun RunningVoiceCoachNavHost() {
             )
         }
         composable(Screen.WorkoutEditor.route) {
-            WorkoutEditorScreen(onBack = { navController.popBackStack() })
+            WorkoutEditorScreen(
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
+            )
         }
         composable(
             route = Screen.ActiveRun.route,
