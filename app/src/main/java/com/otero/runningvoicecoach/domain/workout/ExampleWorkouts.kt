@@ -51,6 +51,37 @@ object ExampleWorkouts {
 
     val presets: List<RoutinePreset> = listOf(
         RoutinePreset(
+            id = 11,
+            workoutPlan = WorkoutPlan(
+                id = "miercoles-13-05",
+                name = "Miercoles 13/05",
+                description = "Movilidad, ritmo suave y cuatro bloques progresivos.",
+                steps = buildList {
+                    add(timeStep("mobility", "Movilidad y tecnica", StepType.WARMUP, 600.0))
+                    add(timeStep("easy-pace-1", "Ritmo 1 suave", StepType.EASY, 300.0, 450, 45))
+                    repeat(4) { index ->
+                        val block = index + 1
+                        add(timeStep("progressive-$block-1", "Bloque $block - 7:30", StepType.INTERVAL, 60.0, 450, 30))
+                        add(timeStep("progressive-$block-2", "Bloque $block - 6:30", StepType.INTERVAL, 60.0, 390, 25))
+                        add(timeStep("progressive-$block-3", "Bloque $block - 5:30", StepType.INTERVAL, 60.0, 330, 20))
+                        if (block < 4) {
+                            add(timeStep("pause-$block", "Pausa $block", StepType.RECOVERY, 60.0, 720, 60))
+                        }
+                    }
+                }
+            ),
+            nivel = "Especial",
+            duracion = "30 min",
+            objetivo = "Probar una rutina progresiva por tiempo con pausas controladas.",
+            detalle = listOf(
+                "10 min de movilidad y tecnica",
+                "5 min a ritmo 1 suave",
+                "4 bloques de 3 min progresivos: 7:30, 6:30 y 5:30 min/km",
+                "1 min de pausa entre bloques"
+            ),
+            idealPara = "Prueba personal del miercoles 13/05"
+        ),
+        RoutinePreset(
             id = 1,
             workoutPlan = WorkoutPlan(
                 id = "inicio-3k",
