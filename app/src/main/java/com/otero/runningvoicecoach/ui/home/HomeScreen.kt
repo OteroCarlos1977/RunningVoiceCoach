@@ -53,7 +53,7 @@ fun HomeScreen(
     onHistory: () -> Unit,
     onSettings: () -> Unit
 ) {
-    AppScaffold(title = "") { padding ->
+    AppScaffold(title = "", showTopBar = false) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -65,7 +65,7 @@ fun HomeScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
-                    .padding(top = 16.dp, bottom = 104.dp),
+                    .padding(top = 34.dp, bottom = 104.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 HeaderRow()
@@ -151,8 +151,8 @@ private fun HeaderRow() {
             painter = painterResource(id = R.drawable.logo),
             contentDescription = "Runners",
             modifier = Modifier
-                .width(188.dp)
-                .height(74.dp),
+                .width(210.dp)
+                .height(82.dp),
             contentScale = ContentScale.Fit
         )
         Box {
@@ -402,7 +402,7 @@ private fun NextRoutineCard(onStart: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(96.dp),
+            .height(84.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = HomeNavy),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -420,7 +420,7 @@ private fun NextRoutineCard(onStart: () -> Unit) {
                 color = HomeBlue
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("⌁", style = MaterialTheme.typography.headlineLarge, color = Color.White)
+                    Text("⌁", style = MaterialTheme.typography.titleLarge, color = Color.White)
                 }
             }
             Column(
@@ -428,10 +428,10 @@ private fun NextRoutineCard(onStart: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text("5K Intermedio", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                Text("35 min  |  Intermedio", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.82f))
+                Text("35 min  |  Intermedio", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.82f))
             }
             Button(
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.height(44.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = HomeBlue),
                 onClick = onStart

@@ -23,30 +23,33 @@ import androidx.compose.ui.unit.dp
 fun AppScaffold(
     title: String,
     onBack: (() -> Unit)? = null,
+    showTopBar: Boolean = true,
     content: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.primary
-                ),
-                navigationIcon = {
-                    if (onBack != null) {
-                        TextButton(onClick = onBack) {
-                            Text("Volver")
+            if (showTopBar) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = title,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    navigationIcon = {
+                        if (onBack != null) {
+                            TextButton(onClick = onBack) {
+                                Text("Volver")
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         },
         content = content
     )
