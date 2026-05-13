@@ -1,12 +1,17 @@
 package com.otero.runningvoicecoach.ui.workouts
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,11 +33,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.data.workout.CustomWorkoutRepository
 import com.otero.runningvoicecoach.domain.model.StepType
 import com.otero.runningvoicecoach.domain.model.TargetType
@@ -41,6 +52,11 @@ import com.otero.runningvoicecoach.domain.model.WorkoutStep
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+private val EditorNavy = Color(0xFF06245A)
+private val EditorBlue = Color(0xFF006DE5)
+private val EditorSoft = Color(0xFFF7FAFF)
+private val EditorMuted = Color(0xFF577095)
 
 @Composable
 fun WorkoutEditorScreen(
@@ -75,117 +91,153 @@ fun WorkoutEditorScreen(
         }
     }
 
-    AppScaffold(
-        title = "Crear rutina",
-        onBack = onBack
-    ) { padding ->
-        Column(
+    AppScaffold(title = "Crear rutina", showTopBar = false) { padding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(EditorSoft)
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "Rutina especial",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Defini la estructura y la app arma los bloques.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.68f)
-            )
-
-            SectionCard {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = name,
-                    onValueChange = { name = it },
-                    singleLine = true,
-                    label = { Text("Nombre de la rutina") }
-                )
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Objetivo o descripcion") }
-                )
-            }
-
-            Text(
-                text = "Estructura",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 34.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                ModeButton(
-                    modifier = Modifier.weight(1f),
-                    text = "Bloques continuos",
-                    selected = routineMode == RoutineMode.CONTINUOUS,
-                    onClick = { routineMode = RoutineMode.CONTINUOUS }
-                )
-                ModeButton(
-                    modifier = Modifier.weight(1f),
-                    text = "Pasadas con descanso",
-                    selected = routineMode == RoutineMode.INTERVALS,
-                    onClick = { routineMode = RoutineMode.INTERVALS }
-                )
-            }
-
-            when (routineMode) {
-                RoutineMode.CONTINUOUS -> ContinuousRoutineEditor(
-                    blockCount = continuousBlockCount,
-                    blocks = continuousBlocks,
-                    onBlockCountChange = ::syncContinuousBlocks,
-                    onBlockChange = { index, block -> continuousBlocks[index] = block }
-                )
-
-                RoutineMode.INTERVALS -> IntervalRoutineEditor(
-                    draft = intervalDraft,
-                    onDraftChange = { intervalDraft = it }
-                )
-            }
-
-            RoutinePreview(
-                mode = routineMode,
-                continuousBlocks = continuousBlocks,
-                intervalDraft = intervalDraft
-            )
-
-            error?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                onClick = {
-                    val workout = buildWorkoutOrNull(
-                        name = name,
-                        description = description,
-                        mode = routineMode,
-                        continuousBlocks = continuousBlocks,
-                        intervalDraft = intervalDraft,
-                        onError = { error = it }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.logo_home),
+                        contentDescription = "Runners",
+                        modifier = Modifier
+                            .width(220.dp)
+                            .height(76.dp),
+                        contentScale = ContentScale.Fit
                     )
-                    if (workout != null) {
-                        scope.launch {
-                            repository.saveWorkout(workout)
-                            onSaved()
-                        }
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = Color.White,
+                        onClick = onBack
+                    ) {
+                        Text(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            text = "Volver",
+                            color = EditorBlue,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
-            ) {
-                Text("Guardar rutina")
+                Text(
+                    text = "Rutina especial",
+                    color = EditorNavy,
+                    fontSize = 40.sp,
+                    lineHeight = 42.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Define bloques, pasadas y descansos con una estructura clara.",
+                    color = EditorMuted,
+                    fontSize = 18.sp,
+                    lineHeight = 22.sp
+                )
+
+                SectionCard {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        label = { Text("Nombre de la rutina") }
+                    )
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Objetivo o descripcion") }
+                    )
+                }
+
+                Text(
+                    text = "Estructura",
+                    color = EditorNavy,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ModeButton(
+                        modifier = Modifier.weight(1f),
+                        text = "Bloques continuos",
+                        selected = routineMode == RoutineMode.CONTINUOUS,
+                        onClick = { routineMode = RoutineMode.CONTINUOUS }
+                    )
+                    ModeButton(
+                        modifier = Modifier.weight(1f),
+                        text = "Pasadas con descanso",
+                        selected = routineMode == RoutineMode.INTERVALS,
+                        onClick = { routineMode = RoutineMode.INTERVALS }
+                    )
+                }
+
+                when (routineMode) {
+                    RoutineMode.CONTINUOUS -> ContinuousRoutineEditor(
+                        blockCount = continuousBlockCount,
+                        blocks = continuousBlocks,
+                        onBlockCountChange = ::syncContinuousBlocks,
+                        onBlockChange = { index, block -> continuousBlocks[index] = block }
+                    )
+
+                    RoutineMode.INTERVALS -> IntervalRoutineEditor(
+                        draft = intervalDraft,
+                        onDraftChange = { intervalDraft = it }
+                    )
+                }
+
+                RoutinePreview(
+                    mode = routineMode,
+                    continuousBlocks = continuousBlocks,
+                    intervalDraft = intervalDraft
+                )
+
+                error?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Button(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(58.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    onClick = {
+                        val workout = buildWorkoutOrNull(
+                            name = name,
+                            description = description,
+                            mode = routineMode,
+                            continuousBlocks = continuousBlocks,
+                            intervalDraft = intervalDraft,
+                            onError = { error = it }
+                        )
+                        if (workout != null) {
+                            scope.launch {
+                                repository.saveWorkout(workout)
+                                onSaved()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Guardar rutina", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -472,7 +524,7 @@ private fun ModeButton(
     onClick: () -> Unit
 ) {
     val colors = if (selected) {
-        ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ButtonDefaults.buttonColors(containerColor = EditorBlue)
     } else {
         ButtonDefaults.outlinedButtonColors()
     }
@@ -502,7 +554,7 @@ private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(

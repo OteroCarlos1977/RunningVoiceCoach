@@ -13,19 +13,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,14 +49,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.data.session.RunHistoryRepository
 import com.otero.runningvoicecoach.data.session.RunSessionSummary
@@ -266,10 +275,7 @@ fun ActiveRunScreen(
         }
     }
 
-    AppScaffold(
-        title = "Carrera activa",
-        onBack = onBack
-    ) { padding ->
+    AppScaffold(title = "Carrera activa", showTopBar = false) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -280,219 +286,369 @@ fun ActiveRunScreen(
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.46f
+                alpha = 1f
             )
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.82f))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.02f),
+                                Color.Black.copy(alpha = 0.08f),
+                                Color(0xF2052145)
+                            )
+                        )
+                    )
             )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            SourceModeRow(
-                useGpsMode = useGpsMode,
-                isRunning = isRunning,
-                onUseGpsModeChange = { enabled ->
-                    useGpsMode = enabled
-                    locationTracker.stop()
-                    locationTracker.reset()
-                    lastGpsTotalDistanceMeters = 0.0
-                }
-            )
-            ActivityBackgroundSelector(
-                selectedIndex = selectedBackgroundIndex,
-                onSelect = { selectedBackgroundIndex = it }
-            )
-            Text(
-                text = workoutPlan.name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            if (useGpsMode && locationState.lastError != null) {
-                Text(
-                    text = locationState.lastError.orEmpty(),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MetricCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Tiempo",
-                    value = formatDuration(totalDurationSeconds)
-                )
-                MetricCard(
-                    modifier = Modifier.weight(1f),
-                    label = "Distancia",
-                    value = formatDistance(totalDistanceMeters)
-                )
-            }
-
-            MetricCard(
-                label = "Ritmo actual",
-                value = PaceCalculator.formatPace(currentPaceSecondsPerKm),
-                large = true
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 22.dp, vertical = 34.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Text(
-                        text = engineState.currentStep?.name ?: "Finalizado",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    LinearProgressIndicator(
-                        progress = { engineState.stepProgressPercent / 100f },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(
-                        text = "Progreso ${engineState.stepProgressPercent.toInt()}%",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    MetricRow(
-                        label = "Ritmo objetivo",
-                        value = PaceCalculator.formatPace(engineState.currentStep?.targetPaceSecondsPerKm)
-                    )
-                    MetricRow(
-                        label = "Diferencia",
-                        value = formatPaceDifference(engineState.paceDifferenceSeconds)
-                    )
-                    MetricRow(label = "Estado", value = engineState.paceStatus.displayName())
-                    MetricRow(
-                        label = "Ritmo promedio",
-                        value = PaceCalculator.formatPace(
-                            PaceCalculator.calculateAveragePaceSecondsPerKm(
-                                distanceMeters = totalDistanceMeters,
-                                durationSeconds = totalDurationSeconds
-                            )
-                        )
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (isFinished) {
-                            currentStepIndex = 0
-                            totalDurationSeconds = 0L
-                            stepDurationSeconds = 0L
-                            totalDistanceMeters = 0.0
-                            stepDistanceMeters = 0.0
-                            lastGpsTotalDistanceMeters = 0.0
-                            currentPaceSecondsPerKm = DEFAULT_SIMULATED_PACE_SECONDS_PER_KM
-                            completedStepSummaries.clear()
-                            alertEngine.reset()
-                            locationTracker.reset()
-                            isFinished = false
-                        }
-                        if (useGpsMode) {
-                            if (locationTracker.hasLocationPermission()) {
-                                locationTracker.start()
-                                RunForegroundService.start(context)
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                }
-                                isRunning = true
-                                isPaused = false
-                            } else {
-                                permissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    )
-                                )
-                            }
-                        } else {
-                            isRunning = true
-                            isPaused = false
-                        }
-                    }
-                ) {
-                    Text(startButtonLabel(isRunning, isPaused, isFinished))
-                }
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (isRunning) {
-                            isPaused = !isPaused
-                            if (isPaused) {
-                                voiceCoach.stop()
-                                if (useGpsMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color.White.copy(alpha = 0.86f),
+                            onClick = {
+                                if (!isRunning) {
+                                    useGpsMode = !useGpsMode
                                     locationTracker.stop()
-                                    RunForegroundService.stop(context)
+                                    locationTracker.reset()
+                                    lastGpsTotalDistanceMeters = 0.0
                                 }
-                            } else if (useGpsMode && locationTracker.hasLocationPermission()) {
-                                locationTracker.start()
-                                RunForegroundService.start(context)
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("●", color = if (useGpsMode) Color(0xFF12B76A) else Color(0xFFFF6A00), fontSize = 15.sp)
+                                Text(if (useGpsMode) "GPS" else "SIM", color = Color(0xFF06245A), fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                                Text("▁▃▆", color = Color(0xFF12B76A), fontSize = 16.sp)
+                                Text("❤ 128", color = Color(0xFF06245A), fontSize = 15.sp)
                             }
                         }
-                    }
-                ) {
-                    Text(if (isPaused) "Reanudar" else "Pausar")
-                }
-            }
-
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    voiceCoach.stop()
-                    locationTracker.stop()
-                    RunForegroundService.stop(context)
-                    isRunning = false
-                    isFinished = true
-                    coroutineScope.launch {
-                        appendStepSummaryIfNeeded(
-                            summaries = completedStepSummaries,
-                            state = engineState,
-                            stepDistanceMeters = stepDistanceMeters,
-                            stepDurationSeconds = stepDurationSeconds
-                        )
-                        historyRepository.saveSession(
-                            RunSessionSummary(
-                                id = UUID.randomUUID().toString(),
-                                workoutName = workoutPlan.name,
-                                finishedAtMillis = System.currentTimeMillis(),
-                                totalDistanceMeters = totalDistanceMeters,
-                                totalDurationSeconds = totalDurationSeconds,
-                                averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
-                                    distanceMeters = totalDistanceMeters,
-                                    durationSeconds = totalDurationSeconds
-                                ),
-                                stepSummaries = completedStepSummaries.toList()
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.18f),
+                            onClick = onBack
+                        ) {
+                            Text(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
+                                text = "‹",
+                                color = Color.White,
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                        )
-                        onFinish()
+                        }
+                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.logo_home),
+                        contentDescription = "Runners",
+                        modifier = Modifier
+                            .width(220.dp)
+                            .height(78.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "%.2f".format(totalDistanceMeters / METERS_PER_KILOMETER),
+                        color = Color.White,
+                        fontSize = 78.sp,
+                        lineHeight = 82.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "DISTANCIA (km)",
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 17.sp,
+                        letterSpacing = 1.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = 22.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(modifier = Modifier.size(9.dp), shape = CircleShape, color = Color.White) {}
+                        Surface(modifier = Modifier.size(9.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.34f)) {}
+                        Surface(modifier = Modifier.size(9.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.34f)) {}
                     }
                 }
-            ) {
-                Text("Finalizar")
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (useGpsMode && locationState.lastError != null) {
+                        Text(
+                            text = locationState.lastError.orEmpty(),
+                            color = Color(0xFFFFD0D0),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            ActivityMetric("TIEMPO", formatDuration(totalDurationSeconds))
+                            ActivityDivider()
+                            ActivityMetric("RITMO", PaceCalculator.formatPace(currentPaceSecondsPerKm), "min/km")
+                            ActivityDivider()
+                            ActivityMetric("CALORIAS", estimatedCalories(totalDistanceMeters).toString(), "kcal")
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            ActivityMetric("FRECUENCIA", "❤ 128", "ppm")
+                            ActivityDivider()
+                            ActivityMetric(
+                                "RITMO PROM.",
+                                PaceCalculator.formatPace(
+                                    PaceCalculator.calculateAveragePaceSecondsPerKm(
+                                        distanceMeters = totalDistanceMeters,
+                                        durationSeconds = totalDurationSeconds
+                                    )
+                                ),
+                                "min/km"
+                            )
+                            ActivityDivider()
+                            ActivityMetric("DESNIVEL", "320", "m")
+                        }
+                    }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.13f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(engineState.currentStep?.name ?: "Finalizado", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(engineState.paceStatus.displayName(), color = paceStatusColor(engineState.paceStatus), fontWeight = FontWeight.Bold)
+                            }
+                            LinearProgressIndicator(
+                                progress = { engineState.stepProgressPercent / 100f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(7.dp)
+                                    .clip(RoundedCornerShape(50)),
+                                color = Color(0xFF006DE5),
+                                trackColor = Color.White.copy(alpha = 0.20f)
+                            )
+                            Text(
+                                text = "Objetivo ${PaceCalculator.formatPace(engineState.currentStep?.targetPaceSecondsPerKm)} · ${formatPaceDifference(engineState.paceDifferenceSeconds)}",
+                                color = Color.White.copy(alpha = 0.76f),
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ActivityControlButton(
+                            label = "▣",
+                            container = Color.White,
+                            content = Color(0xFF006DE5),
+                            size = 76,
+                            onClick = {
+                                selectedBackgroundIndex = (selectedBackgroundIndex + 1) % activityBackgrounds.size
+                            }
+                        )
+                        ActivityControlButton(
+                            label = if (isRunning && !isPaused) "Ⅱ" else "▶",
+                            container = Color(0xFF006DE5),
+                            content = Color.White,
+                            size = 112,
+                            onClick = {
+                                if (isFinished) {
+                                    currentStepIndex = 0
+                                    totalDurationSeconds = 0L
+                                    stepDurationSeconds = 0L
+                                    totalDistanceMeters = 0.0
+                                    stepDistanceMeters = 0.0
+                                    lastGpsTotalDistanceMeters = 0.0
+                                    currentPaceSecondsPerKm = DEFAULT_SIMULATED_PACE_SECONDS_PER_KM
+                                    completedStepSummaries.clear()
+                                    alertEngine.reset()
+                                    locationTracker.reset()
+                                    isFinished = false
+                                }
+                                if (isRunning) {
+                                    isPaused = !isPaused
+                                    if (isPaused) {
+                                        voiceCoach.stop()
+                                        if (useGpsMode) {
+                                            locationTracker.stop()
+                                            RunForegroundService.stop(context)
+                                        }
+                                    } else if (useGpsMode && locationTracker.hasLocationPermission()) {
+                                        locationTracker.start()
+                                        RunForegroundService.start(context)
+                                    }
+                                } else if (useGpsMode) {
+                                    if (locationTracker.hasLocationPermission()) {
+                                        locationTracker.start()
+                                        RunForegroundService.start(context)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                        isRunning = true
+                                        isPaused = false
+                                    } else {
+                                        permissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                } else {
+                                    isRunning = true
+                                    isPaused = false
+                                }
+                            }
+                        )
+                        ActivityControlButton(
+                            label = "■",
+                            container = Color.White,
+                            content = Color(0xFFFF4B0B),
+                            size = 76,
+                            onClick = {
+                                voiceCoach.stop()
+                                locationTracker.stop()
+                                RunForegroundService.stop(context)
+                                isRunning = false
+                                isFinished = true
+                                coroutineScope.launch {
+                                    appendStepSummaryIfNeeded(
+                                        summaries = completedStepSummaries,
+                                        state = engineState,
+                                        stepDistanceMeters = stepDistanceMeters,
+                                        stepDurationSeconds = stepDurationSeconds
+                                    )
+                                    historyRepository.saveSession(
+                                        RunSessionSummary(
+                                            id = UUID.randomUUID().toString(),
+                                            workoutName = workoutPlan.name,
+                                            finishedAtMillis = System.currentTimeMillis(),
+                                            totalDistanceMeters = totalDistanceMeters,
+                                            totalDurationSeconds = totalDurationSeconds,
+                                            averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
+                                                distanceMeters = totalDistanceMeters,
+                                                durationSeconds = totalDurationSeconds
+                                            ),
+                                            stepSummaries = completedStepSummaries.toList()
+                                        )
+                                    )
+                                    onFinish()
+                                }
+                            }
+                        )
+                    }
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                        color = Color.White.copy(alpha = 0.94f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("⌃", color = Color(0xFF06245A), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("Desliza hacia arriba para ver mas", color = Color(0xFF06245A), fontSize = 14.sp)
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun ActivityMetric(
+    label: String,
+    value: String,
+    unit: String? = null
+) {
+    Column(
+        modifier = Modifier.width(96.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Text(value, color = Color.White, fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(label, color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, lineHeight = 15.sp, fontWeight = FontWeight.Medium)
+        if (unit != null) {
+            Text(unit, color = Color.White.copy(alpha = 0.62f), fontSize = 13.sp, lineHeight = 15.sp)
         }
+    }
+}
+
+@Composable
+private fun ActivityDivider() {
+    Spacer(
+        modifier = Modifier
+            .width(1.dp)
+            .height(66.dp)
+            .background(Color.White.copy(alpha = 0.36f))
+    )
+}
+
+@Composable
+private fun ActivityControlButton(
+    label: String,
+    container: Color,
+    content: Color,
+    size: Int,
+    onClick: () -> Unit
+) {
+    Button(
+        modifier = Modifier.size(size.dp),
+        shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+        onClick = onClick
+    ) {
+        Text(label, fontSize = if (size > 90) 50.sp else 32.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+private fun estimatedCalories(distanceMeters: Double): Int {
+    return (distanceMeters / METERS_PER_KILOMETER * 70.0).toInt().coerceAtLeast(0)
+}
+
+private fun paceStatusColor(status: PaceStatus): Color {
+    return when (status) {
+        PaceStatus.WITHIN_TARGET -> Color(0xFF12B76A)
+        PaceStatus.TOO_FAST -> Color(0xFFFFC857)
+        PaceStatus.TOO_SLOW -> Color(0xFFFF6A00)
+        PaceStatus.NO_TARGET -> Color.White.copy(alpha = 0.72f)
     }
 }
 
