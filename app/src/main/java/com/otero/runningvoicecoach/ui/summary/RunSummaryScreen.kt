@@ -35,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
@@ -171,7 +172,7 @@ private fun SegmentTabs() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(50.dp),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
@@ -179,8 +180,8 @@ private fun SegmentTabs() {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             listOf("Resumen", "Semanal", "Mensual", "Anual").forEachIndexed { index, label ->
                 Surface(
@@ -191,7 +192,15 @@ private fun SegmentTabs() {
                     color = if (index == 0) DashBlue else Color.Transparent
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(label, color = if (index == 0) Color.White else DashNavy, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = label,
+                            color = if (index == 0) Color.White else DashNavy,
+                            fontSize = 12.sp,
+                            lineHeight = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
                     }
                 }
             }
@@ -213,18 +222,13 @@ private fun WeeklyDistanceCard(stats: DashboardStats) {
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("👟  Distancia semanal", color = DashNavy, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(stats.weekDistance, color = DashNavy, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-                        Text(" km", color = DashNavy, fontSize = 18.sp, modifier = Modifier.padding(bottom = 5.dp))
-                    }
-                    Text("▲ ${stats.sessionCount} actividades registradas", color = Color(0xFF12B76A), fontSize = 13.sp)
+            Column {
+                Text("👟  Distancia semanal", color = DashNavy, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(stats.weekDistance, color = DashNavy, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+                    Text(" km", color = DashNavy, fontSize = 18.sp, modifier = Modifier.padding(bottom = 5.dp))
                 }
-                Surface(shape = RoundedCornerShape(50), color = Color(0xFFEAF4FF)) {
-                    Text("Esta semana ˅", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = DashBlue, fontWeight = FontWeight.Bold)
-                }
+                Text("▲ ${stats.sessionCount} actividades registradas", color = Color(0xFF12B76A), fontSize = 13.sp)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
