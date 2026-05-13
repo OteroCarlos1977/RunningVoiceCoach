@@ -487,9 +487,9 @@ private fun BottomNavigationBar(
         ) {
             BottomItem("⌂", "Inicio", true, onHome)
             BottomItem("🏃", "Rutinas", false, onRoutines)
-            BottomItem("▥", "Progreso", false, onProgress)
+            BottomItem("▁▃▆", "Progreso", false, onProgress)
             BottomItem("📅", "Plan", false, onPlan)
-            BottomItem("○", "Perfil", false, onProfile)
+            BottomItem("👤", "Perfil", false, onProfile)
         }
     }
 }

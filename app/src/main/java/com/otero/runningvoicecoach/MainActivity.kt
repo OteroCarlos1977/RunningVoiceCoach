@@ -91,7 +91,7 @@ private fun RunnersSplashScreen() {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logo),
+                painter = painterResource(id = R.drawable.logo_home),
                 contentDescription = "Runners",
                 modifier = Modifier
                     .fillMaxWidth()
