@@ -16,6 +16,31 @@ import com.otero.runningvoicecoach.ui.workouts.WorkoutListScreen
 @Composable
 fun RunningVoiceCoachNavHost() {
     val navController = rememberNavController()
+    val goHome = {
+        navController.navigate(Screen.Home.route) {
+            popUpTo(Screen.Home.route) { inclusive = true }
+        }
+    }
+    val goRoutines = {
+        navController.navigate(Screen.WorkoutList.route) {
+            launchSingleTop = true
+        }
+    }
+    val goProgress = {
+        navController.navigate(Screen.RunSummary.route) {
+            launchSingleTop = true
+        }
+    }
+    val goPlan = {
+        navController.navigate(Screen.ActiveRun.createRoute("simulacion-ritmo-7min")) {
+            launchSingleTop = true
+        }
+    }
+    val goProfile = {
+        navController.navigate(Screen.Settings.route) {
+            launchSingleTop = true
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -23,10 +48,10 @@ fun RunningVoiceCoachNavHost() {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNewRun = { navController.navigate(Screen.ActiveRun.createRoute("simulacion-ritmo-7min")) },
-                onWorkouts = { navController.navigate(Screen.WorkoutList.route) },
-                onHistory = { navController.navigate(Screen.RunSummary.route) },
-                onSettings = { navController.navigate(Screen.Settings.route) }
+                onNewRun = goPlan,
+                onWorkouts = goRoutines,
+                onHistory = goProgress,
+                onSettings = goProfile
             )
         }
         composable(Screen.WorkoutList.route) {
@@ -36,14 +61,10 @@ fun RunningVoiceCoachNavHost() {
                 onSelectWorkout = { workoutPlanId ->
                     navController.navigate(Screen.ActiveRun.createRoute(workoutPlanId))
                 },
-                onHome = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                    }
-                },
-                onProgress = { navController.navigate(Screen.RunSummary.route) },
-                onPlan = { navController.navigate(Screen.ActiveRun.createRoute("simulacion-ritmo-7min")) },
-                onProfile = { navController.navigate(Screen.Settings.route) }
+                onHome = goHome,
+                onProgress = goProgress,
+                onPlan = goPlan,
+                onProfile = goProfile
             )
         }
         composable(Screen.WorkoutEditor.route) {
@@ -60,17 +81,27 @@ fun RunningVoiceCoachNavHost() {
                 workoutPlanId = backStackEntry.arguments?.getString(Screen.ActiveRun.ARG_WORKOUT_PLAN_ID),
                 onBack = { navController.popBackStack() },
                 onFinish = {
-                    navController.navigate(Screen.RunSummary.route) {
-                        popUpTo(Screen.Home.route)
-                    }
+                    navController.popBackStack()
                 }
             )
         }
         composable(Screen.RunSummary.route) {
-            RunSummaryScreen(onBack = { navController.popBackStack() })
+            RunSummaryScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = {},
+                onPlan = goPlan,
+                onProfile = goProfile
+            )
         }
         composable(Screen.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = goProgress,
+                onPlan = goPlan,
+                onProfile = {}
+            )
         }
     }
 }

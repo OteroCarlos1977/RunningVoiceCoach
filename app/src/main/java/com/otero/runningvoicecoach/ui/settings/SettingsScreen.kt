@@ -55,7 +55,13 @@ private val HealthSoft = Color(0xFFF7FAFF)
 private val HealthMuted = Color(0xFF577095)
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(
+    onHome: () -> Unit,
+    onRoutines: () -> Unit,
+    onProgress: () -> Unit,
+    onPlan: () -> Unit,
+    onProfile: () -> Unit
+) {
     val context = LocalContext.current
     val repository = remember { UserSettingsRepository(context.applicationContext) }
     val settings by repository.settings.collectAsState(
@@ -139,7 +145,11 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
-                onHome = onBack
+                onHome = onHome,
+                onRoutines = onRoutines,
+                onProgress = onProgress,
+                onPlan = onPlan,
+                onProfile = onProfile
             )
         }
     }
@@ -397,7 +407,11 @@ private fun NumericSettingCard(
 @Composable
 private fun HealthBottomBar(
     modifier: Modifier,
-    onHome: () -> Unit
+    onHome: () -> Unit,
+    onRoutines: () -> Unit,
+    onProgress: () -> Unit,
+    onPlan: () -> Unit,
+    onProfile: () -> Unit
 ) {
     Card(
         modifier = modifier
@@ -415,10 +429,10 @@ private fun HealthBottomBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             BottomItem("⌂", "Inicio", false, onHome)
-            BottomItem("🏃", "Rutinas", false, {})
-            BottomItem("▁▃▆", "Progreso", false, {})
-            BottomItem("❤", "Salud", true, {})
-            BottomItem("👤", "Perfil", false, {})
+            BottomItem("🏃", "Rutinas", false, onRoutines)
+            BottomItem("▁▃▆", "Progreso", false, onProgress)
+            BottomItem("📅", "Plan", false, onPlan)
+            BottomItem("👤", "Perfil", true, onProfile)
         }
     }
 }

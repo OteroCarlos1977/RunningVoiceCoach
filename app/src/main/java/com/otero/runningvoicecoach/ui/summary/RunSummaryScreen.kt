@@ -51,7 +51,13 @@ private val DashSoft = Color(0xFFF7FAFF)
 private val DashMuted = Color(0xFF577095)
 
 @Composable
-fun RunSummaryScreen(onBack: () -> Unit) {
+fun RunSummaryScreen(
+    onHome: () -> Unit,
+    onRoutines: () -> Unit,
+    onProgress: () -> Unit,
+    onPlan: () -> Unit,
+    onProfile: () -> Unit
+) {
     val context = LocalContext.current
     val repository = remember { RunHistoryRepository(context.applicationContext) }
     val sessions by repository.sessions.collectAsState(initial = emptyList())
@@ -91,7 +97,11 @@ fun RunSummaryScreen(onBack: () -> Unit) {
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
-                onHome = onBack
+                onHome = onHome,
+                onRoutines = onRoutines,
+                onProgress = onProgress,
+                onPlan = onPlan,
+                onProfile = onProfile
             )
         }
     }
@@ -357,7 +367,14 @@ private fun BottomStat(label: String, value: String, trend: String) {
 }
 
 @Composable
-private fun DashboardBottomBar(modifier: Modifier, onHome: () -> Unit) {
+private fun DashboardBottomBar(
+    modifier: Modifier,
+    onHome: () -> Unit,
+    onRoutines: () -> Unit,
+    onProgress: () -> Unit,
+    onPlan: () -> Unit,
+    onProfile: () -> Unit
+) {
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -372,10 +389,10 @@ private fun DashboardBottomBar(modifier: Modifier, onHome: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             BottomItem("⌂", "Inicio", false, onHome)
-            BottomItem("🏃", "Rutinas", false, {})
-            BottomItem("▁▃▆", "Progreso", true, {})
-            BottomItem("📅", "Plan", false, {})
-            BottomItem("👤", "Perfil", false, {})
+            BottomItem("🏃", "Rutinas", false, onRoutines)
+            BottomItem("▁▃▆", "Progreso", true, onProgress)
+            BottomItem("📅", "Plan", false, onPlan)
+            BottomItem("👤", "Perfil", false, onProfile)
         }
     }
 }
