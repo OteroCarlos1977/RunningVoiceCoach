@@ -62,9 +62,9 @@ fun HomeScreen(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0xD806162D),
-                                Color(0xEA06162D),
-                                Color(0xF806162D)
+                Color(0xB006162D),
+                Color(0xD806162D),
+                Color(0xEC06162D)
                             )
                         )
                     )
@@ -200,7 +200,7 @@ private fun HomeHero(
                     )
                 }
                 Image(
-                    painter = painterResource(id = R.drawable.runners_logo),
+                    painter = painterResource(id = R.drawable.logo),
                     contentDescription = "Runners",
                     modifier = Modifier
                         .height(46.dp)
@@ -217,9 +217,12 @@ private fun HomeHero(
                     Button(
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .height(58.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            contentColor = Color.White
+                        ),
                         onClick = onNewRun
                     ) {
                         Text("Iniciar")
@@ -227,11 +230,15 @@ private fun HomeHero(
                     OutlinedButton(
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .height(58.dp),
                         shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xCC0A1F3D),
+                            contentColor = Color.White
+                        ),
                         onClick = onWorkouts
                     ) {
-                        Text("Rutinas", color = Color.White)
+                        Text("Rutinas")
                     }
                 }
             }
@@ -259,7 +266,7 @@ private fun MetricTile(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xEEFFFFFF)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xCC0A1F3D)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
@@ -274,14 +281,15 @@ private fun MetricTile(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     text = label,
                     style = MaterialTheme.typography.bodySmall,
-                    color = accent,
+                    color = Color.White,
                     fontWeight = FontWeight.SemiBold
                 )
             }
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
     }
@@ -292,7 +300,7 @@ private fun ProgressCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xEEFFFFFF)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xCC0A1F3D)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
@@ -303,8 +311,13 @@ private fun ProgressCard() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Meta semanal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("0 / 15 km", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Meta semanal",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text("0 / 15 km", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary)
             }
             LinearProgressIndicator(
                 progress = { 0.0f },
@@ -313,7 +326,7 @@ private fun ProgressCard() {
             Text(
                 text = "Cuando empieces a correr, este panel se alimenta del historial local.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f)
+                color = Color.White.copy(alpha = 0.68f)
             )
         }
     }
@@ -327,7 +340,7 @@ private fun NextRoutineCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A1F3D)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xE60A1F3D)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
@@ -354,7 +367,10 @@ private fun NextRoutineCard(
                 Button(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = Color.White
+                    ),
                     onClick = onStart
                 ) {
                     Text("Correr")
@@ -362,9 +378,13 @@ private fun NextRoutineCard(
                 OutlinedButton(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xCC12365F),
+                        contentColor = Color.White
+                    ),
                     onClick = onWorkouts
                 ) {
-                    Text("Cambiar", color = Color.White)
+                    Text("Cambiar")
                 }
             }
         }
@@ -381,7 +401,7 @@ private fun ActionCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xEEFFFFFF)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xCC0A1F3D)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         onClick = onClick
     ) {
@@ -391,11 +411,16 @@ private fun ActionCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.64f)
+                color = Color.White.copy(alpha = 0.68f)
             )
         }
     }

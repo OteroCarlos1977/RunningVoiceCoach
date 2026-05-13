@@ -1,5 +1,7 @@
 package com.otero.runningvoicecoach.ui.workouts
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -28,11 +31,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.data.workout.CustomWorkoutRepository
 import com.otero.runningvoicecoach.domain.model.TargetType
 import com.otero.runningvoicecoach.domain.model.WorkoutPlan
@@ -55,10 +62,33 @@ fun WorkoutListScreen(
         title = "Rutinas",
         onBack = onBack
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.fondo5),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                alpha = 0.34f
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xE806162D),
+                                Color(0xF406162D)
+                            )
+                        )
+                    )
+            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(22.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -68,16 +98,18 @@ fun WorkoutListScreen(
                 style = MaterialTheme.typography.displaySmall,
                 fontStyle = FontStyle.Italic,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = Color.White
             )
             Text(
                 text = "Elegi tu entrenamiento y segui avanzando.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.68f)
+                color = Color.White.copy(alpha = 0.72f)
             )
 
             Button(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.tertiary
@@ -91,7 +123,8 @@ fun WorkoutListScreen(
                 Text(
                     text = "Tus rutinas",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
                 customWorkouts.forEach { workout ->
                     CustomWorkoutCard(
@@ -104,7 +137,8 @@ fun WorkoutListScreen(
             Text(
                 text = "Rutinas base",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
             routines.forEach { routine ->
                 RoutinePresetCard(
@@ -112,6 +146,7 @@ fun WorkoutListScreen(
                     onSelectWorkout = onSelectWorkout
                 )
             }
+        }
         }
     }
 }
@@ -154,7 +189,7 @@ private fun CustomWorkoutCard(
                 InfoPill(text = workout.estimatedDurationLabel())
                 InfoPill(text = "Personalizada", color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f), contentColor = MaterialTheme.colorScheme.tertiary)
             }
-            workout.steps.take(4).forEach { step ->
+            workout.steps.take(3).forEach { step ->
                 Text(
                     text = "• ${step.name}: ${step.targetLabel()}",
                     style = MaterialTheme.typography.bodySmall,
@@ -235,7 +270,7 @@ private fun RoutinePresetCard(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    routine.detalle.take(3).forEach { item ->
+                    routine.detalle.take(2).forEach { item ->
                         Text(
                             text = "• $item",
                             style = MaterialTheme.typography.bodySmall,
