@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.ui.components.AppScaffold
+import com.otero.runningvoicecoach.ui.components.BottomTab
+import com.otero.runningvoicecoach.ui.components.RunnersBottomBar
 
 private val HealthNavy = Color(0xFF06245A)
 private val HealthBlue = Color(0xFF006DE5)
@@ -109,7 +111,8 @@ fun HealthScreen(
                 HealthAdviceCard()
             }
 
-            HealthBottomBar(
+            RunnersBottomBar(
+                selected = BottomTab.HEALTH,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -254,54 +257,6 @@ private fun HealthAdviceCard() {
                 Text("Usa esta pantalla solo para datos reales o cargados por el usuario.", color = HealthMuted, fontSize = 13.sp)
             }
             Text("›", color = HealthTeal, fontSize = 32.sp)
-        }
-    }
-}
-
-@Composable
-private fun HealthBottomBar(
-    modifier: Modifier,
-    onHome: () -> Unit,
-    onRoutines: () -> Unit,
-    onProgress: () -> Unit,
-    onHealth: () -> Unit,
-    onProfile: () -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(76.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomItem("⌂", "Inicio", false, onHome)
-            BottomItem("🏃", "Rutinas", false, onRoutines)
-            BottomItem("▁▃▆", "Progreso", false, onProgress)
-            BottomItem("❤", "Salud", true, onHealth)
-            BottomItem("👤", "Perfil", false, onProfile)
-        }
-    }
-}
-
-@Composable
-private fun BottomItem(
-    icon: String,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(onClick = onClick, color = Color.Transparent) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(icon, style = MaterialTheme.typography.titleLarge, color = if (selected) HealthBlue else HealthMuted)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) HealthBlue else HealthMuted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
         }
     }
 }

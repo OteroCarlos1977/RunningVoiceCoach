@@ -42,6 +42,8 @@ import com.otero.runningvoicecoach.data.session.RunHistoryRepository
 import com.otero.runningvoicecoach.data.session.RunSessionSummary
 import com.otero.runningvoicecoach.domain.pace.PaceCalculator
 import com.otero.runningvoicecoach.ui.components.AppScaffold
+import com.otero.runningvoicecoach.ui.components.BottomTab
+import com.otero.runningvoicecoach.ui.components.RunnersBottomBar
 
 private val DashNavy = Color(0xFF06245A)
 private val DashBlue = Color(0xFF006DE5)
@@ -93,7 +95,8 @@ fun RunSummaryScreen(
                 BottomStatsCard(stats = stats)
             }
 
-            DashboardBottomBar(
+            RunnersBottomBar(
+                selected = BottomTab.PROGRESS,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -363,47 +366,6 @@ private fun BottomStat(label: String, value: String, trend: String) {
         Text(label, color = DashNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Text(value, color = DashNavy, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(trend, color = Color(0xFF12B76A), fontSize = 10.sp)
-    }
-}
-
-@Composable
-private fun DashboardBottomBar(
-    modifier: Modifier,
-    onHome: () -> Unit,
-    onRoutines: () -> Unit,
-    onProgress: () -> Unit,
-    onHealth: () -> Unit,
-    onProfile: () -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(76.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomItem("⌂", "Inicio", false, onHome)
-            BottomItem("🏃", "Rutinas", false, onRoutines)
-            BottomItem("▁▃▆", "Progreso", true, onProgress)
-            BottomItem("❤", "Salud", false, onHealth)
-            BottomItem("👤", "Perfil", false, onProfile)
-        }
-    }
-}
-
-@Composable
-private fun BottomItem(icon: String, label: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(onClick = onClick, color = Color.Transparent) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(icon, style = MaterialTheme.typography.titleLarge, color = if (selected) DashBlue else DashMuted)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) DashBlue else DashMuted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
-        }
     }
 }
 

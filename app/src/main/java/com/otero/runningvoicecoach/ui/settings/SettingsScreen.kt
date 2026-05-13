@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.data.settings.UserSettingsRepository
 import com.otero.runningvoicecoach.ui.components.AppScaffold
+import com.otero.runningvoicecoach.ui.components.BottomTab
+import com.otero.runningvoicecoach.ui.components.RunnersBottomBar
 import kotlinx.coroutines.launch
 
 private val ProfileNavy = Color(0xFF06245A)
@@ -122,7 +124,8 @@ fun SettingsScreen(
                 )
             }
 
-            ProfileBottomBar(
+            RunnersBottomBar(
+                selected = BottomTab.PROFILE,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -275,53 +278,5 @@ private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content
         )
-    }
-}
-
-@Composable
-private fun ProfileBottomBar(
-    modifier: Modifier,
-    onHome: () -> Unit,
-    onRoutines: () -> Unit,
-    onProgress: () -> Unit,
-    onHealth: () -> Unit,
-    onProfile: () -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(76.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomItem("⌂", "Inicio", false, onHome)
-            BottomItem("🏃", "Rutinas", false, onRoutines)
-            BottomItem("▁▃▆", "Progreso", false, onProgress)
-            BottomItem("❤", "Salud", false, onHealth)
-            BottomItem("👤", "Perfil", true, onProfile)
-        }
-    }
-}
-
-@Composable
-private fun BottomItem(
-    icon: String,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(onClick = onClick, color = Color.Transparent) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(icon, style = MaterialTheme.typography.titleLarge, color = if (selected) ProfileBlue else ProfileMuted)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) ProfileBlue else ProfileMuted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
-        }
     }
 }

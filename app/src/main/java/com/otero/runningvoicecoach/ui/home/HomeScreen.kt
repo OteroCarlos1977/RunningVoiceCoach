@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.ui.components.AppScaffold
+import com.otero.runningvoicecoach.ui.components.BottomTab
+import com.otero.runningvoicecoach.ui.components.RunnersBottomBar
 
 private val HomeNavy = Color(0xFF06245A)
 private val HomeBlue = Color(0xFF006DE5)
@@ -130,7 +132,8 @@ fun HomeScreen(
                 NextRoutineCard(onStart = onNewRun)
             }
 
-            BottomNavigationBar(
+            RunnersBottomBar(
+                selected = BottomTab.HOME,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -159,28 +162,7 @@ private fun HeaderRow() {
                 .height(82.dp),
             contentScale = ContentScale.Fit
         )
-        Box {
-            Text(
-                text = "♢",
-                style = MaterialTheme.typography.headlineMedium,
-                color = HomeNavy
-            )
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 2.dp),
-                color = HomeOrange,
-                shape = CircleShape
-            ) {
-                Text(
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                    text = "2",
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
+        Spacer(modifier = Modifier.width(28.dp))
     }
 }
 
@@ -458,60 +440,6 @@ private fun NextRoutineCard(onStart: () -> Unit) {
             ) {
                 Text("Iniciar", fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
-        }
-    }
-}
-
-@Composable
-private fun BottomNavigationBar(
-    modifier: Modifier = Modifier,
-    onHome: () -> Unit,
-    onRoutines: () -> Unit,
-    onProgress: () -> Unit,
-    onHealth: () -> Unit,
-    onProfile: () -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(76.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomItem("⌂", "Inicio", true, onHome)
-            BottomItem("🏃", "Rutinas", false, onRoutines)
-            BottomItem("▁▃▆", "Progreso", false, onProgress)
-            BottomItem("❤", "Salud", false, onHealth)
-            BottomItem("👤", "Perfil", false, onProfile)
-        }
-    }
-}
-
-@Composable
-private fun BottomItem(
-    icon: String,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        color = Color.Transparent
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(icon, style = MaterialTheme.typography.titleLarge, color = if (selected) HomeBlue else HomeTextMuted)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) HomeBlue else HomeTextMuted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
         }
     }
 }

@@ -208,8 +208,8 @@ private fun CardInfo() {
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Mas que correr", color = Color(0xFF06245A), fontSize = 18.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold)
-            Text("Energia, enfoque y bienestar para tu dia a dia.", color = Color(0xFF24416A), fontSize = 13.sp)
+            Text("Mas que correr", color = Color(0xFF06245A), fontSize = 15.sp, lineHeight = 17.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold)
+            Text("Energia, enfoque y bienestar para tu dia a dia.", color = Color(0xFF24416A), fontSize = 11.sp, lineHeight = 13.sp)
         }
     }
 }
