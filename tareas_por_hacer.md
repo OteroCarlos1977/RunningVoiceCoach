@@ -2,6 +2,11 @@
 
 ## Prioridad inmediata
 
+- Preparar primera version instalable para prueba personal funcional.
+- Configurar firma release local sin subir claves al repositorio.
+- Generar changelog corto de la version `0.1.0`.
+- Instalar APK release en dispositivo propio y comparar contra debug.
+- Luego de la prueba personal, preparar distribucion manual para 10 corredores.
 - Revisar en dispositivo la ultima version de la pantalla Rutinas.
 - Ajustar finamente tamanos, espaciados e iconos si las nuevas capturas muestran cortes.
 - Continuar con funcionalidad del Home:
@@ -70,6 +75,7 @@
 
 - Mantener `assembleDebug` pasando antes de cada commit.
 - Mantener `testDebugUnitTest` pasando antes de cada commit.
+- Antes de entregar APK a testers, ejecutar `assembleRelease`.
 - Agregar pruebas sobre:
   - calculo de mejores marcas;
   - seleccion de proxima rutina;

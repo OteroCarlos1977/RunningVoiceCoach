@@ -100,6 +100,14 @@ Detener daemons de Gradle si alguna ejecucion queda colgada:
 .\gradlew.bat --stop
 ```
 
+Generar APK release para distribucion manual:
+
+```powershell
+.\gradlew.bat assembleRelease
+```
+
+La firma release se configura con un archivo local `keystore.properties`, no versionado. El procedimiento esta documentado en `documentacion/distribucion_manual.md`.
+
 ## Estructura principal
 
 - `app/src/main/java/com/otero/runningvoicecoach/domain`: modelos, calculos, motor de entrenamiento y alertas.
@@ -115,3 +123,4 @@ Detener daemons de Gradle si alguna ejecucion queda colgada:
 - Los commits se redactan en espanol.
 - `capturas_app/` se usa como carpeta local de referencia visual y no debe subirse al repositorio.
 - La prioridad inmediata es consolidar funcionalidad y luego profundizar UI pantalla por pantalla.
+- La distribucion externa sera manual: primero prueba personal, luego grupo reducido de 10 corredores.
