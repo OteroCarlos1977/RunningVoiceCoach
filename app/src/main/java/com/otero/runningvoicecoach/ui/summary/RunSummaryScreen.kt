@@ -153,12 +153,6 @@ private fun DashboardHeader() {
                         .height(72.dp),
                     contentScale = ContentScale.Fit
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("♢", color = DashNavy, fontSize = 30.sp)
-                    Surface(modifier = Modifier.size(54.dp), shape = CircleShape, color = Color(0xFFEAF4FF)) {
-                        Box(contentAlignment = Alignment.Center) { Text("👤", fontSize = 26.sp) }
-                    }
-                }
             }
             Text("¡Hola, Runner!", color = DashNavy, fontSize = 18.sp, fontWeight = FontWeight.Medium)
             Text("Dashboard", color = DashNavy, fontSize = 50.sp, lineHeight = 52.sp, fontWeight = FontWeight.Bold)
