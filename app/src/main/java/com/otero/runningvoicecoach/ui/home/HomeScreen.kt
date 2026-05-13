@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,7 +36,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 
@@ -148,10 +151,10 @@ private fun HeaderRow() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
-            painter = painterResource(id = R.drawable.logo),
+            painter = painterResource(id = R.drawable.logo_home),
             contentDescription = "Runners",
             modifier = Modifier
-                .width(210.dp)
+                .width(252.dp)
                 .height(82.dp),
             contentScale = ContentScale.Fit
         )
@@ -402,7 +405,7 @@ private fun NextRoutineCard(onStart: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(84.dp),
+            .height(96.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = HomeNavy),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -410,12 +413,12 @@ private fun NextRoutineCard(onStart: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Surface(
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(48.dp),
                 shape = CircleShape,
                 color = HomeBlue
             ) {
@@ -427,16 +430,32 @@ private fun NextRoutineCard(onStart: () -> Unit) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text("5K Intermedio", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                Text("35 min  |  Intermedio", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.82f))
+                Text(
+                    text = "5K Intermedio",
+                    color = Color.White,
+                    fontSize = 19.sp,
+                    lineHeight = 21.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "35 min  |  Intermedio",
+                    color = Color.White.copy(alpha = 0.82f),
+                    fontSize = 13.sp,
+                    lineHeight = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Button(
                 modifier = Modifier.height(44.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = HomeBlue),
+                contentPadding = PaddingValues(horizontal = 14.dp),
                 onClick = onStart
             ) {
-                Text("Iniciar", fontWeight = FontWeight.Bold)
+                Text("Iniciar", fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
         }
     }
