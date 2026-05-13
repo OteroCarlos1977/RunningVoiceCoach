@@ -125,7 +125,7 @@ private fun CustomWorkoutCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A1F3D)),
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
     ) {
         Column(
@@ -136,13 +136,14 @@ private fun CustomWorkoutCard(
                 text = workout.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontStyle = FontStyle.Italic,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
             workout.description?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                    color = Color.White.copy(alpha = 0.72f)
                 )
             }
             FlowRow(
@@ -157,7 +158,7 @@ private fun CustomWorkoutCard(
                 Text(
                     text = "• ${step.name}: ${step.targetLabel()}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                    color = Color.White.copy(alpha = 0.72f)
                 )
             }
             OutlinedButton(
@@ -165,7 +166,7 @@ private fun CustomWorkoutCard(
                 shape = RoundedCornerShape(16.dp),
                 onClick = { onSelectWorkout(workout.id) }
             ) {
-                Text("Seleccionar")
+                Text("Seleccionar", color = Color.White)
             }
         }
     }
@@ -182,7 +183,7 @@ private fun RoutinePresetCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A1F3D)),
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -210,7 +211,7 @@ private fun RoutinePresetCard(
                         style = MaterialTheme.typography.titleLarge,
                         fontStyle = FontStyle.Italic,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White
                     )
                     Text(
                         text = "›",
@@ -221,7 +222,7 @@ private fun RoutinePresetCard(
                 Text(
                     text = routine.objetivo,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                    color = Color.White.copy(alpha = 0.72f)
                 )
 
                 FlowRow(
@@ -238,7 +239,7 @@ private fun RoutinePresetCard(
                         Text(
                             text = "• $item",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                            color = Color.White.copy(alpha = 0.72f)
                         )
                     }
                 }
@@ -246,7 +247,7 @@ private fun RoutinePresetCard(
                 Text(
                     text = "Ideal para: ${routine.idealPara}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.Medium
                 )
 
@@ -255,7 +256,7 @@ private fun RoutinePresetCard(
                     shape = RoundedCornerShape(16.dp),
                     onClick = { onSelectWorkout(routine.workoutPlan.id) }
                 ) {
-                    Text("Seleccionar")
+                    Text("Seleccionar", color = Color.White)
                 }
             }
         }

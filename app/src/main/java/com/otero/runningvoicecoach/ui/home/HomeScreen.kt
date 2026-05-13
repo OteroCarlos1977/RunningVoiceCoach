@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,14 +44,38 @@ fun HomeScreen(
     onSettings: () -> Unit
 ) {
     AppScaffold(title = "Runners") { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.fondo2),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                alpha = 0.58f
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xD806162D),
+                                Color(0xEA06162D),
+                                Color(0xF806162D)
+                            )
+                        )
+                    )
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             HomeHero(onNewRun = onNewRun, onWorkouts = onWorkouts)
 
             SectionTitle("Hoy")
@@ -116,6 +141,7 @@ fun HomeScreen(
                 subtitle = "Voz, OpenAI, tolerancia y alertas",
                 onClick = onSettings
             )
+        }
         }
     }
 }
@@ -189,7 +215,9 @@ private fun HomeHero(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
                         onClick = onNewRun
@@ -197,7 +225,9 @@ private fun HomeHero(
                         Text("Iniciar")
                     }
                     OutlinedButton(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         onClick = onWorkouts
                     ) {
@@ -215,7 +245,7 @@ private fun SectionTitle(text: String) {
         text = text,
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground
+        color = Color.White
     )
 }
 
@@ -229,7 +259,7 @@ private fun MetricTile(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color(0xEEFFFFFF)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
@@ -262,7 +292,7 @@ private fun ProgressCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color(0xEEFFFFFF)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
@@ -351,12 +381,14 @@ private fun ActionCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color(0xEEFFFFFF)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         onClick = onClick
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .heightIn(min = 104.dp)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
