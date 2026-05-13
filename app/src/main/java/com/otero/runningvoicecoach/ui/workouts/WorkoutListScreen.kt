@@ -270,8 +270,8 @@ private fun RoutineRowShell(
                         Text(
                             text = title,
                             color = WorkoutsNavy,
-                            fontSize = 20.sp,
-                            lineHeight = 22.sp,
+                            fontSize = 16.sp,
+                            lineHeight = 18.sp,
                             fontStyle = FontStyle.Italic,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -284,13 +284,15 @@ private fun RoutineRowShell(
                             Text(
                                 text = "◷ $duration",
                                 color = WorkoutsMuted,
-                                fontSize = 14.sp,
+                                fontSize = 11.sp,
+                                lineHeight = 13.sp,
                                 maxLines = 1
                             )
                             Text(
                                 text = "▁▃▆",
                                 color = accent,
-                                fontSize = 15.sp,
+                                fontSize = 12.sp,
+                                lineHeight = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             LevelPill(level = level, accent = accent)
@@ -345,8 +347,8 @@ private fun LevelPill(
             modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp),
             text = level,
             color = accent,
-            fontSize = 13.sp,
-            lineHeight = 15.sp,
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
             maxLines = 1,
             fontWeight = FontWeight.Medium
         )
