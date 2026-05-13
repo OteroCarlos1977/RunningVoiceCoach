@@ -5,16 +5,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -22,7 +24,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -38,7 +40,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
 import com.otero.runningvoicecoach.data.workout.CustomWorkoutRepository
 import com.otero.runningvoicecoach.domain.model.TargetType
@@ -47,251 +51,258 @@ import com.otero.runningvoicecoach.domain.workout.ExampleWorkouts
 import com.otero.runningvoicecoach.domain.workout.RoutinePreset
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 
+private val WorkoutsNavy = Color(0xFF06245A)
+private val WorkoutsBlue = Color(0xFF006DE5)
+private val WorkoutsOrange = Color(0xFFFF6A00)
+private val WorkoutsSoft = Color(0xFFF7FAFF)
+private val WorkoutsMuted = Color(0xFF577095)
+
 @Composable
 fun WorkoutListScreen(
     onBack: () -> Unit,
     onCreateWorkout: () -> Unit,
     onSelectWorkout: (String) -> Unit,
-    routines: List<RoutinePreset> = ExampleWorkouts.presets
+    routines: List<RoutinePreset> = ExampleWorkouts.presets,
+    onHome: () -> Unit = onBack,
+    onProgress: () -> Unit = {},
+    onPlan: () -> Unit = {},
+    onProfile: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val repository = remember { CustomWorkoutRepository(context.applicationContext) }
     val customWorkouts by repository.workouts.collectAsState(initial = emptyList())
 
-    AppScaffold(
-        title = "Rutinas",
-        onBack = onBack
-    ) { padding ->
+    AppScaffold(title = "Rutinas", showTopBar = false) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(WorkoutsSoft)
                 .padding(padding)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.fondo5),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alpha = 0.34f
-            )
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color(0xE806162D),
-                                Color(0xF406162D)
-                            )
-                        )
-                    )
-            )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(
-                text = "Rutinas",
-                style = MaterialTheme.typography.displaySmall,
-                fontStyle = FontStyle.Italic,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Text(
-                text = "Elegi tu entrenamiento y segui avanzando.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.72f)
-            )
-
-            Button(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary
-                ),
-                onClick = onCreateWorkout
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 34.dp, bottom = 108.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Programar rutina especial")
-            }
+                WorkoutsHeader(onCreateWorkout = onCreateWorkout)
 
-            if (customWorkouts.isNotEmpty()) {
-                Text(
-                    text = "Tus rutinas",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                customWorkouts.forEach { workout ->
-                    CustomWorkoutCard(
-                        workout = workout,
+                if (customWorkouts.isNotEmpty()) {
+                    Text(
+                        text = "Tus rutinas",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = WorkoutsNavy,
+                        fontWeight = FontWeight.Bold
+                    )
+                    customWorkouts.forEach { workout ->
+                        CustomWorkoutRow(workout = workout, onSelectWorkout = onSelectWorkout)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                routines.forEachIndexed { index, routine ->
+                    RoutinePresetRow(
+                        routine = routine,
+                        index = index,
                         onSelectWorkout = onSelectWorkout
                     )
                 }
             }
 
-            Text(
-                text = "Rutinas base",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+            WorkoutsBottomBar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                onHome = onHome,
+                onRoutines = {},
+                onProgress = onProgress,
+                onPlan = onPlan,
+                onProfile = onProfile
             )
-            routines.forEach { routine ->
-                RoutinePresetCard(
-                    routine = routine,
-                    onSelectWorkout = onSelectWorkout
-                )
-            }
-        }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CustomWorkoutCard(
+private fun WorkoutsHeader(onCreateWorkout: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.fondo6),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .fillMaxWidth()
+                .height(230.dp),
+            contentScale = ContentScale.Crop,
+            alpha = 0.82f
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(230.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            WorkoutsSoft,
+                            WorkoutsSoft.copy(alpha = 0.82f),
+                            WorkoutsSoft.copy(alpha = 0.10f)
+                        )
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.logo_home),
+                contentDescription = "Runners",
+                modifier = Modifier
+                    .width(210.dp)
+                    .height(72.dp),
+                contentScale = ContentScale.Fit
+            )
+            Text(
+                text = "Rutinas",
+                color = WorkoutsNavy,
+                fontSize = 43.sp,
+                lineHeight = 46.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Elige tu entrenamiento y sigue avanzando.",
+                color = WorkoutsMuted,
+                fontSize = 18.sp,
+                lineHeight = 22.sp
+            )
+            Button(
+                modifier = Modifier.height(44.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = WorkoutsBlue),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                onClick = onCreateWorkout
+            ) {
+                Text("Rutina especial", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomWorkoutRow(
     workout: WorkoutPlan,
     onSelectWorkout: (String) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A1F3D)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = workout.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontStyle = FontStyle.Italic,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            workout.description?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.72f)
-                )
-            }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                InfoPill(text = "${workout.steps.size} bloques")
-                InfoPill(text = workout.estimatedDurationLabel())
-                InfoPill(text = "Personalizada", color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f), contentColor = MaterialTheme.colorScheme.tertiary)
-            }
-            workout.steps.take(3).forEach { step ->
-                Text(
-                    text = "• ${step.name}: ${step.targetLabel()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.72f)
-                )
-            }
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                onClick = { onSelectWorkout(workout.id) }
-            ) {
-                Text("Seleccionar", color = Color.White)
-            }
-        }
-    }
+    RoutineRowShell(
+        title = workout.name,
+        duration = workout.estimatedDurationLabel(),
+        level = "Personalizada",
+        accent = WorkoutsBlue,
+        leading = "★",
+        onClick = { onSelectWorkout(workout.id) }
+    )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RoutinePresetCard(
+private fun RoutinePresetRow(
     routine: RoutinePreset,
+    index: Int,
     onSelectWorkout: (String) -> Unit
 ) {
-    val accent = routine.nivel.accentColor()
+    RoutineRowShell(
+        title = routine.workoutPlan.name,
+        duration = routine.duracion,
+        level = routine.nivel,
+        accent = routine.nivel.accentColor(),
+        leading = routine.leadingMark(index),
+        onClick = { onSelectWorkout(routine.workoutPlan.id) }
+    )
+}
 
+@Composable
+private fun RoutineRowShell(
+    title: String,
+    duration: String,
+    level: String,
+    accent: Color,
+    leading: String,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(78.dp),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A1F3D)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .width(5.dp)
-                    .fillMaxHeight()
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = accent
-                ) {}
-            }
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Transparent,
+            onClick = onClick
+        ) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .width(5.dp)
+                        .fillMaxHeight()
+                        .background(accent)
+                )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(13.dp)
                 ) {
-                    Text(
-                        text = routine.workoutPlan.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontStyle = FontStyle.Italic,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    RoutineMark(mark = leading, accent = accent)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = title,
+                            color = WorkoutsNavy,
+                            fontSize = 20.sp,
+                            lineHeight = 22.sp,
+                            fontStyle = FontStyle.Italic,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "◷ $duration",
+                                color = WorkoutsMuted,
+                                fontSize = 14.sp,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "▁▃▆",
+                                color = accent,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            LevelPill(level = level, accent = accent)
+                        }
+                    }
                     Text(
                         text = "›",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = WorkoutsBlue,
+                        fontSize = 36.sp,
+                        lineHeight = 36.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-                Text(
-                    text = routine.objetivo,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.72f)
-                )
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    InfoPill(text = routine.duracion)
-                    InfoPill(text = routine.nivel, color = accent.copy(alpha = 0.13f), contentColor = accent)
-                    InfoPill(text = "${routine.workoutPlan.steps.size} bloques")
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    routine.detalle.take(2).forEach { item ->
-                        Text(
-                            text = "• $item",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.72f)
-                        )
-                    }
-                }
-
-                Text(
-                    text = "Ideal para: ${routine.idealPara}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontWeight = FontWeight.Medium
-                )
-
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    onClick = { onSelectWorkout(routine.workoutPlan.id) }
-                ) {
-                    Text("Seleccionar", color = Color.White)
                 }
             }
         }
@@ -299,31 +310,121 @@ private fun RoutinePresetCard(
 }
 
 @Composable
-private fun InfoPill(
-    text: String,
-    color: Color = MaterialTheme.colorScheme.surfaceVariant,
-    contentColor: Color = MaterialTheme.colorScheme.primary
+private fun RoutineMark(
+    mark: String,
+    accent: Color
 ) {
     Surface(
-        color = color,
+        modifier = Modifier.size(60.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFEAF4FF)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = mark,
+                color = accent,
+                fontSize = 24.sp,
+                lineHeight = 26.sp,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun LevelPill(
+    level: String,
+    accent: Color
+) {
+    Surface(
+        color = accent.copy(alpha = 0.10f),
         shape = RoundedCornerShape(50)
     ) {
         Text(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = contentColor,
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp),
+            text = level,
+            color = accent,
+            fontSize = 13.sp,
+            lineHeight = 15.sp,
+            maxLines = 1,
             fontWeight = FontWeight.Medium
         )
     }
 }
 
+@Composable
+private fun WorkoutsBottomBar(
+    modifier: Modifier = Modifier,
+    onHome: () -> Unit,
+    onRoutines: () -> Unit,
+    onProgress: () -> Unit,
+    onPlan: () -> Unit,
+    onProfile: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(76.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BottomItem("⌂", "Inicio", false, onHome)
+            BottomItem("🏃", "Rutinas", true, onRoutines)
+            BottomItem("▁▃▆", "Progreso", false, onProgress)
+            BottomItem("📅", "Plan", false, onPlan)
+            BottomItem("👤", "Perfil", false, onProfile)
+        }
+    }
+}
+
+@Composable
+private fun BottomItem(
+    icon: String,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(onClick = onClick, color = Color.Transparent) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(icon, style = MaterialTheme.typography.titleLarge, color = if (selected) WorkoutsBlue else WorkoutsMuted)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) WorkoutsBlue else WorkoutsMuted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+        }
+    }
+}
+
+private fun RoutinePreset.leadingMark(index: Int): String {
+    return when {
+        workoutPlan.name.contains("3K", ignoreCase = true) -> "3K"
+        workoutPlan.name.contains("5K", ignoreCase = true) -> "5K"
+        workoutPlan.name.contains("10K", ignoreCase = true) -> "10K"
+        workoutPlan.name.contains("21K", ignoreCase = true) -> "21K"
+        workoutPlan.name.contains("Caminata", ignoreCase = true) -> "👟"
+        workoutPlan.name.contains("Velocidad", ignoreCase = true) -> "◴"
+        workoutPlan.name.contains("Cuesta", ignoreCase = true) -> "↗"
+        workoutPlan.name.contains("Fondo", ignoreCase = true) -> "〰"
+        workoutPlan.name.contains("Recuper", ignoreCase = true) -> "♡"
+        else -> "${index + 1}"
+    }
+}
+
 private fun String.accentColor(): Color {
     return when (this) {
-        "Avanzado" -> Color(0xFFFF6A00)
-        "Intermedio" -> Color(0xFF1565C0)
+        "Avanzado" -> WorkoutsOrange
         "Suave" -> Color(0xFF00A8A8)
-        else -> Color(0xFF1565C0)
+        "Intermedio" -> WorkoutsBlue
+        else -> WorkoutsBlue
     }
 }
 
@@ -337,12 +438,5 @@ private fun WorkoutPlan.estimatedDurationLabel(): String {
         "${seconds / 60L} min"
     } else {
         "Por distancia"
-    }
-}
-
-private fun com.otero.runningvoicecoach.domain.model.WorkoutStep.targetLabel(): String {
-    return when (targetType) {
-        TargetType.TIME_SECONDS -> "${targetValue.toLong() / 60L} min"
-        TargetType.DISTANCE_METERS -> "%.2f km".format(targetValue / 1000.0)
     }
 }

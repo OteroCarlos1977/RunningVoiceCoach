@@ -35,7 +35,15 @@ fun RunningVoiceCoachNavHost() {
                 onCreateWorkout = { navController.navigate(Screen.WorkoutEditor.route) },
                 onSelectWorkout = { workoutPlanId ->
                     navController.navigate(Screen.ActiveRun.createRoute(workoutPlanId))
-                }
+                },
+                onHome = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
+                onProgress = { navController.navigate(Screen.RunSummary.route) },
+                onPlan = { navController.navigate(Screen.ActiveRun.createRoute("simulacion-ritmo-7min")) },
+                onProfile = { navController.navigate(Screen.Settings.route) }
             )
         }
         composable(Screen.WorkoutEditor.route) {
