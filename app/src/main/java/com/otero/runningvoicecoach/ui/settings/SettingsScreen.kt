@@ -5,15 +5,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -33,7 +32,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,19 +45,17 @@ import com.otero.runningvoicecoach.data.settings.UserSettingsRepository
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 import kotlinx.coroutines.launch
 
-private val HealthNavy = Color(0xFF06245A)
-private val HealthBlue = Color(0xFF006DE5)
-private val HealthOrange = Color(0xFFFF6A00)
-private val HealthTeal = Color(0xFF00A8A8)
-private val HealthSoft = Color(0xFFF7FAFF)
-private val HealthMuted = Color(0xFF577095)
+private val ProfileNavy = Color(0xFF06245A)
+private val ProfileBlue = Color(0xFF006DE5)
+private val ProfileSoft = Color(0xFFF7FAFF)
+private val ProfileMuted = Color(0xFF577095)
 
 @Composable
 fun SettingsScreen(
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
-    onPlan: () -> Unit,
+    onHealth: () -> Unit,
     onProfile: () -> Unit
 ) {
     val context = LocalContext.current
@@ -72,11 +68,11 @@ fun SettingsScreen(
         mutableStateOf(settings.developmentOpenAiApiKey)
     }
 
-    AppScaffold(title = "Salud", showTopBar = false) { padding ->
+    AppScaffold(title = "Perfil", showTopBar = false) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(HealthSoft)
+                .background(ProfileSoft)
                 .padding(padding)
         ) {
             Column(
@@ -87,25 +83,9 @@ fun SettingsScreen(
                     .padding(top = 34.dp, bottom = 108.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                HealthHeader()
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "❤", title = "Ritmo cardiaco", value = "54", unit = "lpm", subtitle = "En reposo", status = "En rango saludable", accent = HealthOrange)
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "↻", title = "Recuperacion", value = "82", unit = "%", subtitle = "Listo para entrenar", status = "Optima", accent = HealthTeal)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "☾", title = "Sueño", value = "7 h 36", unit = "min", subtitle = "Calidad del sueño", status = "Buena", accent = HealthBlue)
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "💧", title = "Hidratacion", value = "1.8", unit = "L", subtitle = "Objetivo: 2.5 L", status = "72% del objetivo", accent = HealthBlue)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "🔥", title = "Calorias activas", value = "512", unit = "kcal", subtitle = "Hoy", status = "En progreso", accent = HealthOrange)
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "👟", title = "Pasos", value = "8,432", unit = "", subtitle = "Objetivo: 10,000", status = "84% del objetivo", accent = HealthTeal)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "≋", title = "Oxigeno en sangre", value = "98", unit = "%", subtitle = "SpO2 promedio", status = "Excelente", accent = HealthTeal)
-                    HealthMetricCard(modifier = Modifier.weight(1f), icon = "☯", title = "Estres", value = "32", unit = "Bajo", subtitle = "Nivel de estres", status = "Bajo control", accent = Color(0xFF8A4BE8))
-                }
-                DailyAdviceCard()
-                Text("Configuracion de entrenamiento", color = HealthNavy, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                ProfileHeader()
+                ProfileDataCard()
+                Text("Configuracion del sistema", color = ProfileNavy, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 SettingsSwitchCard(
                     title = "Voz",
                     subtitle = "Reproducir alertas por TextToSpeech",
@@ -141,14 +121,15 @@ fun SettingsScreen(
                     onIncrease = { scope.launch { repository.setGeneralPaceToleranceSeconds(settings.generalPaceToleranceSeconds + 5) } }
                 )
             }
-            HealthBottomBar(
+
+            ProfileBottomBar(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
                 onHome = onHome,
                 onRoutines = onRoutines,
                 onProgress = onProgress,
-                onPlan = onPlan,
+                onHealth = onHealth,
                 onProfile = onProfile
             )
         }
@@ -156,131 +137,54 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun HealthHeader() {
-    Box(
+private fun ProfileHeader() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Image(
+            painter = painterResource(id = R.drawable.logo_home),
+            contentDescription = "Runners",
+            modifier = Modifier
+                .width(230.dp)
+                .height(82.dp),
+            contentScale = ContentScale.Fit
+        )
+        Text("Perfil", color = ProfileNavy, fontSize = 42.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold)
+        Text("Tus datos y preferencias de entrenamiento.", color = ProfileMuted, fontSize = 18.sp)
+    }
+}
+
+@Composable
+private fun ProfileDataCard() {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(330.dp)
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.fondo6),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .fillMaxWidth()
-                .height(235.dp),
-            contentScale = ContentScale.Crop,
-            alpha = 0.82f
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(235.dp)
-                .background(Brush.horizontalGradient(listOf(HealthSoft, HealthSoft.copy(alpha = 0.82f), HealthSoft.copy(alpha = 0.08f))))
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(id = R.drawable.logo_home),
-                    contentDescription = "Runners",
-                    modifier = Modifier
-                        .width(235.dp)
-                        .height(86.dp),
-                    contentScale = ContentScale.Fit
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HeaderCircle("♢")
-                    HeaderCircle("⋮")
-                }
-            }
-            Text("Salud y biometria", color = HealthNavy, fontSize = 38.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold)
-            Text("Conoce tu cuerpo. Mejora tu rendimiento.", color = HealthMuted, fontSize = 18.sp)
-        }
-    }
-}
-
-@Composable
-private fun HeaderCircle(text: String) {
-    Surface(modifier = Modifier.size(48.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.78f)) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text, color = HealthNavy, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-private fun HealthMetricCard(
-    modifier: Modifier,
-    icon: String,
-    title: String,
-    value: String,
-    unit: String,
-    subtitle: String,
-    status: String,
-    accent: Color
-) {
-    Card(
-        modifier = modifier.height(182.dp),
+            .height(142.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Surface(modifier = Modifier.size(44.dp), shape = CircleShape, color = accent.copy(alpha = 0.12f)) {
-                    Box(contentAlignment = Alignment.Center) { Text(icon, color = accent, fontSize = 23.sp) }
-                }
-                Text("›", color = HealthNavy, fontSize = 28.sp)
-            }
-            Text(title, color = HealthNavy, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, color = HealthNavy, fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold)
-                if (unit.isNotBlank()) {
-                    Text(" $unit", color = HealthNavy, fontSize = 16.sp, modifier = Modifier.padding(bottom = 4.dp))
-                }
-            }
-            Text(subtitle, color = HealthMuted, fontSize = 13.sp, maxLines = 1)
-            Surface(shape = RoundedCornerShape(50), color = accent.copy(alpha = 0.12f)) {
-                Text(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    text = "●  $status",
-                    color = accent,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DailyAdviceCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(92.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFFFFD)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-    ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(18.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("♡", color = HealthTeal, fontSize = 34.sp)
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Consejo del dia", color = HealthNavy, fontWeight = FontWeight.Bold)
-                Text("Tu recuperacion esta optima. Es un gran dia para entrenar.", color = HealthMuted, fontSize = 13.sp)
+            Surface(
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(72.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFFEAF4FF)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("👤", fontSize = 36.sp)
+                }
             }
-            Text("›", color = HealthTeal, fontSize = 32.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Runner", color = ProfileNavy, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("Datos personales pendientes de configurar.", color = ProfileMuted, fontSize = 14.sp)
+                Text("Objetivo: mejorar constancia y ritmo", color = ProfileBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -293,51 +197,24 @@ private fun DevelopmentApiKeyCard(
     onSave: () -> Unit,
     onClear: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "API key de desarrollo",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = if (hasSavedApiKey) "Hay una clave guardada localmente." else "Tambien puede venir desde OPENAI_API_KEY.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = apiKeyDraft,
-                onValueChange = onApiKeyChange,
-                singleLine = true,
-                label = { Text("OPENAI_API_KEY") },
-                visualTransformation = PasswordVisualTransformation()
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onClear
-                ) {
-                    Text("Borrar")
-                }
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onSave
-                ) {
-                    Text("Guardar")
-                }
-            }
+    SectionCard {
+        Text("API key de desarrollo", color = ProfileNavy, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(
+            text = if (hasSavedApiKey) "Hay una clave guardada localmente." else "Tambien puede venir desde OPENAI_API_KEY.",
+            style = MaterialTheme.typography.bodySmall,
+            color = ProfileMuted
+        )
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = apiKeyDraft,
+            onValueChange = onApiKeyChange,
+            singleLine = true,
+            label = { Text("OPENAI_API_KEY") },
+            visualTransformation = PasswordVisualTransformation()
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(modifier = Modifier.weight(1f), onClick = onClear) { Text("Borrar") }
+            OutlinedButton(modifier = Modifier.weight(1f), onClick = onSave) { Text("Guardar") }
         }
     }
 }
@@ -349,24 +226,15 @@ private fun SettingsSwitchCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
+    SectionCard {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                )
+                Text(text = title, color = ProfileNavy, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = ProfileMuted)
             }
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
@@ -380,37 +248,43 @@ private fun NumericSettingCard(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+    SectionCard {
+        Text(text = title, color = ProfileNavy, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(onClick = onDecrease) { Text("-") }
-                Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                OutlinedButton(onClick = onIncrease) { Text("+") }
-            }
+            OutlinedButton(onClick = onDecrease) { Text("-") }
+            Text(text = value, color = ProfileNavy, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            OutlinedButton(onClick = onIncrease) { Text("+") }
         }
     }
 }
 
 @Composable
-private fun HealthBottomBar(
+private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun ProfileBottomBar(
     modifier: Modifier,
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
-    onPlan: () -> Unit,
+    onHealth: () -> Unit,
     onProfile: () -> Unit
 ) {
     Card(
@@ -431,7 +305,7 @@ private fun HealthBottomBar(
             BottomItem("⌂", "Inicio", false, onHome)
             BottomItem("🏃", "Rutinas", false, onRoutines)
             BottomItem("▁▃▆", "Progreso", false, onProgress)
-            BottomItem("📅", "Plan", false, onPlan)
+            BottomItem("❤", "Salud", false, onHealth)
             BottomItem("👤", "Perfil", true, onProfile)
         }
     }
@@ -446,8 +320,8 @@ private fun BottomItem(
 ) {
     Surface(onClick = onClick, color = Color.Transparent) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(icon, style = MaterialTheme.typography.titleLarge, color = if (selected) HealthBlue else HealthMuted)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) HealthBlue else HealthMuted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+            Text(icon, style = MaterialTheme.typography.titleLarge, color = if (selected) ProfileBlue else ProfileMuted)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) ProfileBlue else ProfileMuted, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
         }
     }
 }

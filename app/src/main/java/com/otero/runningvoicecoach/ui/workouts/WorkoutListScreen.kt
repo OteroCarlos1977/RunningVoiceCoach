@@ -65,7 +65,7 @@ fun WorkoutListScreen(
     routines: List<RoutinePreset> = ExampleWorkouts.presets,
     onHome: () -> Unit = onBack,
     onProgress: () -> Unit = {},
-    onPlan: () -> Unit = {},
+    onHealth: () -> Unit = {},
     onProfile: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -118,7 +118,7 @@ fun WorkoutListScreen(
                 onHome = onHome,
                 onRoutines = {},
                 onProgress = onProgress,
-                onPlan = onPlan,
+                onHealth = onHealth,
                 onProfile = onProfile
             )
         }
@@ -361,7 +361,7 @@ private fun WorkoutsBottomBar(
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
-    onPlan: () -> Unit,
+    onHealth: () -> Unit,
     onProfile: () -> Unit
 ) {
     Card(
@@ -382,7 +382,7 @@ private fun WorkoutsBottomBar(
             BottomItem("⌂", "Inicio", false, onHome)
             BottomItem("🏃", "Rutinas", true, onRoutines)
             BottomItem("▁▃▆", "Progreso", false, onProgress)
-            BottomItem("📅", "Plan", false, onPlan)
+            BottomItem("❤", "Salud", false, onHealth)
             BottomItem("👤", "Perfil", false, onProfile)
         }
     }

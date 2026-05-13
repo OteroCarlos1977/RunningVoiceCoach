@@ -7,6 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.otero.runningvoicecoach.ui.activeRun.ActiveRunScreen
+import com.otero.runningvoicecoach.ui.health.HealthScreen
 import com.otero.runningvoicecoach.ui.home.HomeScreen
 import com.otero.runningvoicecoach.ui.settings.SettingsScreen
 import com.otero.runningvoicecoach.ui.summary.RunSummaryScreen
@@ -31,8 +32,13 @@ fun RunningVoiceCoachNavHost() {
             launchSingleTop = true
         }
     }
-    val goPlan = {
+    val startDefaultRun = {
         navController.navigate(Screen.ActiveRun.createRoute("simulacion-ritmo-7min")) {
+            launchSingleTop = true
+        }
+    }
+    val goHealth = {
+        navController.navigate(Screen.Health.route) {
             launchSingleTop = true
         }
     }
@@ -48,9 +54,10 @@ fun RunningVoiceCoachNavHost() {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNewRun = goPlan,
+                onNewRun = startDefaultRun,
                 onWorkouts = goRoutines,
                 onHistory = goProgress,
+                onHealth = goHealth,
                 onSettings = goProfile
             )
         }
@@ -63,7 +70,7 @@ fun RunningVoiceCoachNavHost() {
                 },
                 onHome = goHome,
                 onProgress = goProgress,
-                onPlan = goPlan,
+                onHealth = goHealth,
                 onProfile = goProfile
             )
         }
@@ -90,7 +97,16 @@ fun RunningVoiceCoachNavHost() {
                 onHome = goHome,
                 onRoutines = goRoutines,
                 onProgress = {},
-                onPlan = goPlan,
+                onHealth = goHealth,
+                onProfile = goProfile
+            )
+        }
+        composable(Screen.Health.route) {
+            HealthScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = goProgress,
+                onHealth = {},
                 onProfile = goProfile
             )
         }
@@ -99,7 +115,7 @@ fun RunningVoiceCoachNavHost() {
                 onHome = goHome,
                 onRoutines = goRoutines,
                 onProgress = goProgress,
-                onPlan = goPlan,
+                onHealth = goHealth,
                 onProfile = {}
             )
         }

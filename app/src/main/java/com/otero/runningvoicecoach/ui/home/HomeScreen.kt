@@ -54,6 +54,7 @@ fun HomeScreen(
     onNewRun: () -> Unit,
     onWorkouts: () -> Unit,
     onHistory: () -> Unit,
+    onHealth: () -> Unit,
     onSettings: () -> Unit
 ) {
     AppScaffold(title = "", showTopBar = false) { padding ->
@@ -136,7 +137,7 @@ fun HomeScreen(
                 onHome = {},
                 onRoutines = onWorkouts,
                 onProgress = onHistory,
-                onPlan = onNewRun,
+                onHealth = onHealth,
                 onProfile = onSettings
             )
         }
@@ -467,7 +468,7 @@ private fun BottomNavigationBar(
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
-    onPlan: () -> Unit,
+    onHealth: () -> Unit,
     onProfile: () -> Unit
 ) {
     Card(
@@ -488,7 +489,7 @@ private fun BottomNavigationBar(
             BottomItem("⌂", "Inicio", true, onHome)
             BottomItem("🏃", "Rutinas", false, onRoutines)
             BottomItem("▁▃▆", "Progreso", false, onProgress)
-            BottomItem("📅", "Plan", false, onPlan)
+            BottomItem("❤", "Salud", false, onHealth)
             BottomItem("👤", "Perfil", false, onProfile)
         }
     }

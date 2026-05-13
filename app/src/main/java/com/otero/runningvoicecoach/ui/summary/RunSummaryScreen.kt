@@ -55,7 +55,7 @@ fun RunSummaryScreen(
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
-    onPlan: () -> Unit,
+    onHealth: () -> Unit,
     onProfile: () -> Unit
 ) {
     val context = LocalContext.current
@@ -100,7 +100,7 @@ fun RunSummaryScreen(
                 onHome = onHome,
                 onRoutines = onRoutines,
                 onProgress = onProgress,
-                onPlan = onPlan,
+                onHealth = onHealth,
                 onProfile = onProfile
             )
         }
@@ -372,7 +372,7 @@ private fun DashboardBottomBar(
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
-    onPlan: () -> Unit,
+    onHealth: () -> Unit,
     onProfile: () -> Unit
 ) {
     Card(
@@ -391,7 +391,7 @@ private fun DashboardBottomBar(
             BottomItem("⌂", "Inicio", false, onHome)
             BottomItem("🏃", "Rutinas", false, onRoutines)
             BottomItem("▁▃▆", "Progreso", true, onProgress)
-            BottomItem("📅", "Plan", false, onPlan)
+            BottomItem("❤", "Salud", false, onHealth)
             BottomItem("👤", "Perfil", false, onProfile)
         }
     }
