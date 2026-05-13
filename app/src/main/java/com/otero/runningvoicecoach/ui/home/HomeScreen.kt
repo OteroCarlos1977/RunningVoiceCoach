@@ -120,7 +120,7 @@ fun HomeScreen(
                     )
                 }
 
-                WeeklyProgressCard()
+                BestPerformanceCard()
 
                 SectionHeader(title = "Proxima rutina", action = "Ver plan")
                 NextRoutineCard(onStart = onNewRun)
@@ -151,8 +151,8 @@ private fun HeaderRow() {
             painter = painterResource(id = R.drawable.logo),
             contentDescription = "Runners",
             modifier = Modifier
-                .width(156.dp)
-                .height(62.dp),
+                .width(188.dp)
+                .height(74.dp),
             contentScale = ContentScale.Fit
         )
         Box {
@@ -343,11 +343,11 @@ private fun SummaryCard(
 }
 
 @Composable
-private fun WeeklyProgressCard() {
+private fun BestPerformanceCard() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(136.dp),
+            .height(132.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -360,44 +360,40 @@ private fun WeeklyProgressCard() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Tu progreso semanal", style = MaterialTheme.typography.titleMedium, color = HomeNavy, fontWeight = FontWeight.Bold)
-                Text("Sigue asi, vas por buen camino.", style = MaterialTheme.typography.bodySmall, color = HomeTextMuted)
-                Text("38.75 km", style = MaterialTheme.typography.headlineMedium, color = HomeNavy, fontWeight = FontWeight.Bold)
-                Text("de 50 km objetivo", style = MaterialTheme.typography.bodySmall, color = HomeTextMuted)
+                Text("Resumen Mejor Tiempo", style = MaterialTheme.typography.titleMedium, color = HomeNavy, fontWeight = FontWeight.Bold)
+                Text("Tus mejores datos de todas las practicas.", style = MaterialTheme.typography.bodySmall, color = HomeTextMuted)
+                Text("6:10 min/km", style = MaterialTheme.typography.headlineMedium, color = HomeNavy, fontWeight = FontWeight.Bold)
+                Text("Mejor ritmo promedio", style = MaterialTheme.typography.bodySmall, color = HomeTextMuted)
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Bottom
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.End
             ) {
-                WeeklyBar(0.52f, HomeBlue)
-                WeeklyBar(0.78f, HomeBlue)
-                WeeklyBar(0.44f, HomeBlue.copy(alpha = 0.72f))
-                WeeklyBar(0.64f, HomeBlue)
-                WeeklyBar(0.46f, HomeBlue.copy(alpha = 0.72f))
-                WeeklyBar(0.82f, HomeCyan)
+                BestMetric(label = "5K", value = "31:20")
+                BestMetric(label = "Dist.", value = "7.36 km")
+                BestMetric(label = "Activo", value = "45:28")
             }
         }
     }
 }
 
 @Composable
-private fun WeeklyBar(
-    percent: Float,
-    color: Color
+private fun BestMetric(
+    label: String,
+    value: String
 ) {
-    Box(
-        modifier = Modifier
-            .width(14.dp)
-            .height(72.dp),
-        contentAlignment = Alignment.BottomCenter
+    Surface(
+        color = Color(0xFFEAF4FF),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .width(14.dp)
-                .height((72 * percent).dp)
-                .clip(RoundedCornerShape(7.dp))
-                .background(color)
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = HomeBlue, fontWeight = FontWeight.Bold)
+            Text(value, style = MaterialTheme.typography.labelLarge, color = HomeNavy, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
@@ -406,7 +402,7 @@ private fun NextRoutineCard(onStart: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(112.dp),
+            .height(96.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = HomeNavy),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -419,7 +415,7 @@ private fun NextRoutineCard(onStart: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Surface(
-                modifier = Modifier.size(68.dp),
+                modifier = Modifier.size(56.dp),
                 shape = CircleShape,
                 color = HomeBlue
             ) {
@@ -429,14 +425,13 @@ private fun NextRoutineCard(onStart: () -> Unit) {
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text("5K Intermedio", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                Text("5K Intermedio", style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
                 Text("35 min  |  Intermedio", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.82f))
-                Text("Resistencia y ritmo constante.", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.72f))
             }
             Button(
-                modifier = Modifier.height(54.dp),
+                modifier = Modifier.height(48.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = HomeBlue),
                 onClick = onStart
@@ -472,9 +467,9 @@ private fun BottomNavigationBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             BottomItem("⌂", "Inicio", true, onHome)
-            BottomItem("♟", "Rutinas", false, onRoutines)
+            BottomItem("🏃", "Rutinas", false, onRoutines)
             BottomItem("▥", "Progreso", false, onProgress)
-            BottomItem("□", "Plan", false, onPlan)
+            BottomItem("📅", "Plan", false, onPlan)
             BottomItem("○", "Perfil", false, onProfile)
         }
     }
