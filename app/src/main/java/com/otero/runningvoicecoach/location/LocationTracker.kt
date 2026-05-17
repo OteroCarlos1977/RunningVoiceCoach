@@ -91,6 +91,7 @@ class LocationTracker(
             latitude = location.latitude,
             longitude = location.longitude,
             accuracyMeters = location.accuracy,
+            altitudeMeters = location.altitude.takeIf { location.hasAltitude() },
             speedMetersPerSecond = speedMetersPerSecond,
             totalDistanceMeters = _state.value.totalDistanceMeters + distanceDelta,
             currentPaceSecondsPerKm = speedMetersPerSecond?.let {

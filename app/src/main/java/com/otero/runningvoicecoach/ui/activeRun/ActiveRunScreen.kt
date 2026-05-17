@@ -61,21 +61,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
+import com.otero.runningvoicecoach.data.session.RunActivityRepository
 import com.otero.runningvoicecoach.data.session.RunHistoryRepository
 import com.otero.runningvoicecoach.data.session.RunSessionSummary
 import com.otero.runningvoicecoach.data.session.RunStepSummary
 import com.otero.runningvoicecoach.data.settings.UserSettingsRepository
 import com.otero.runningvoicecoach.data.workout.CustomWorkoutRepository
+import com.otero.runningvoicecoach.domain.activity.RunTelemetryRecorder
 import com.otero.runningvoicecoach.domain.alert.AlertEngine
 import com.otero.runningvoicecoach.domain.alert.AlertPriority
 import com.otero.runningvoicecoach.domain.alert.LocalMessageProvider
 import com.otero.runningvoicecoach.domain.model.PaceStatus
+import com.otero.runningvoicecoach.domain.model.RunPauseSegment
+import com.otero.runningvoicecoach.domain.model.RunRoutePoint
+import com.otero.runningvoicecoach.domain.model.RunSession
+import com.otero.runningvoicecoach.domain.model.RunSessionStatus
+import com.otero.runningvoicecoach.domain.model.RunStepResult
 import com.otero.runningvoicecoach.domain.pace.PaceCalculator
 import com.otero.runningvoicecoach.domain.workout.ExampleWorkouts
 import com.otero.runningvoicecoach.domain.workout.WorkoutEngine
 import com.otero.runningvoicecoach.domain.workout.WorkoutEngineState
 import com.otero.runningvoicecoach.location.LocationTracker
 import com.otero.runningvoicecoach.location.RunForegroundService
+import com.otero.runningvoicecoach.location.RunLocationState
 import com.otero.runningvoicecoach.openai.OpenAIClient
 import com.otero.runningvoicecoach.openai.RunningAlertContext
 import com.otero.runningvoicecoach.ui.components.AppScaffold
@@ -101,7 +109,9 @@ fun ActiveRunScreen(
     val voiceCoach = remember { AndroidVoiceCoach(context) }
     val locationTracker = remember { LocationTracker(context.applicationContext) }
     val historyRepository = remember { RunHistoryRepository(context.applicationContext) }
+    val activityRepository = remember { RunActivityRepository(context.applicationContext) }
     val settingsRepository = remember { UserSettingsRepository(context.applicationContext) }
+    val telemetryRecorder = remember { RunTelemetryRecorder() }
     val userSettings by settingsRepository.settings.collectAsState(
         initial = com.otero.runningvoicecoach.data.settings.UserSettings()
     )
@@ -122,9 +132,13 @@ fun ActiveRunScreen(
     var totalDistanceMeters by rememberSaveable { mutableDoubleStateOf(0.0) }
     var stepDistanceMeters by rememberSaveable { mutableDoubleStateOf(0.0) }
     var lastGpsTotalDistanceMeters by rememberSaveable { mutableDoubleStateOf(0.0) }
+    var sessionStartedAtMillis by rememberSaveable { mutableLongStateOf(0L) }
+    var activePauseStartedAtMillis by rememberSaveable { mutableLongStateOf(0L) }
+    var activePauseStartedAtElapsedSeconds by rememberSaveable { mutableLongStateOf(0L) }
     var currentPaceSecondsPerKm by rememberSaveable { mutableStateOf<Int?>(330) }
     var selectedBackgroundIndex by rememberSaveable { mutableIntStateOf(0) }
     val completedStepSummaries = remember { mutableStateListOf<RunStepSummary>() }
+    val pauseSegments = remember { mutableStateListOf<RunPauseSegment>() }
     var engineState by remember(workoutPlan.id) {
         mutableStateOf(
             workoutEngine.evaluate(
@@ -147,6 +161,9 @@ fun ActiveRunScreen(
         if (granted) {
             locationTracker.reset()
             lastGpsTotalDistanceMeters = 0.0
+            if (sessionStartedAtMillis == 0L) {
+                sessionStartedAtMillis = System.currentTimeMillis()
+            }
             isRunning = true
             isPaused = false
             isFinished = false
@@ -192,6 +209,17 @@ fun ActiveRunScreen(
             totalDistanceMeters += metersThisSecond
             stepDistanceMeters += metersThisSecond
             currentPaceSecondsPerKm = nextPace
+            telemetryRecorder.recordSample(
+                elapsedSeconds = totalDurationSeconds,
+                totalDistanceMeters = totalDistanceMeters,
+                speedKmh = speedKmhFor(nextPace, metersThisSecond),
+                routePoint = routePointFor(
+                    locationState = latestLocationState,
+                    elapsedSeconds = totalDurationSeconds,
+                    totalDistanceMeters = totalDistanceMeters,
+                    useGpsMode = useGpsMode
+                )
+            )
 
             val nextState = workoutEngine.evaluate(
                 workoutPlan = workoutPlan,
@@ -245,11 +273,13 @@ fun ActiveRunScreen(
                     stepDistanceMeters = stepDistanceMeters,
                     stepDurationSeconds = stepDurationSeconds
                 )
+                val sessionId = UUID.randomUUID().toString()
+                val finishedAtMillis = System.currentTimeMillis()
                 historyRepository.saveSession(
                     RunSessionSummary(
-                        id = UUID.randomUUID().toString(),
+                        id = sessionId,
                         workoutName = workoutPlan.name,
-                        finishedAtMillis = System.currentTimeMillis(),
+                        finishedAtMillis = finishedAtMillis,
                         totalDistanceMeters = totalDistanceMeters,
                         totalDurationSeconds = totalDurationSeconds,
                         averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
@@ -257,6 +287,20 @@ fun ActiveRunScreen(
                             durationSeconds = totalDurationSeconds
                         ),
                         stepSummaries = completedStepSummaries.toList()
+                    )
+                )
+                activityRepository.saveSession(
+                    buildRunSession(
+                        id = sessionId,
+                        workoutPlanId = workoutPlan.id,
+                        workoutName = workoutPlan.name,
+                        startedAtMillis = sessionStartedAtMillis,
+                        finishedAtMillis = finishedAtMillis,
+                        totalDistanceMeters = totalDistanceMeters,
+                        totalDurationSeconds = totalDurationSeconds,
+                        stepSummaries = completedStepSummaries,
+                        pauseSegments = pauseSegments,
+                        telemetryRecorder = telemetryRecorder
                     )
                 )
                 isFinished = true
@@ -494,14 +538,33 @@ fun ActiveRunScreen(
                                     totalDistanceMeters = 0.0
                                     stepDistanceMeters = 0.0
                                     lastGpsTotalDistanceMeters = 0.0
+                                    sessionStartedAtMillis = 0L
+                                    activePauseStartedAtMillis = 0L
+                                    activePauseStartedAtElapsedSeconds = 0L
                                     currentPaceSecondsPerKm = DEFAULT_SIMULATED_PACE_SECONDS_PER_KM
                                     completedStepSummaries.clear()
+                                    pauseSegments.clear()
+                                    telemetryRecorder.reset()
                                     alertEngine.reset()
                                     locationTracker.reset()
                                     isFinished = false
                                 }
                                 if (isRunning) {
-                                    isPaused = !isPaused
+                                    val nextPaused = !isPaused
+                                    if (nextPaused) {
+                                        activePauseStartedAtMillis = System.currentTimeMillis()
+                                        activePauseStartedAtElapsedSeconds = totalDurationSeconds
+                                    } else if (activePauseStartedAtMillis > 0L) {
+                                        pauseSegments += RunPauseSegment(
+                                            startedAtMillis = activePauseStartedAtMillis,
+                                            endedAtMillis = System.currentTimeMillis(),
+                                            startedAtElapsedSeconds = activePauseStartedAtElapsedSeconds,
+                                            endedAtElapsedSeconds = totalDurationSeconds
+                                        )
+                                        activePauseStartedAtMillis = 0L
+                                        activePauseStartedAtElapsedSeconds = 0L
+                                    }
+                                    isPaused = nextPaused
                                     if (isPaused) {
                                         voiceCoach.stop()
                                         if (useGpsMode) {
@@ -519,6 +582,9 @@ fun ActiveRunScreen(
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                         }
+                                        if (sessionStartedAtMillis == 0L) {
+                                            sessionStartedAtMillis = System.currentTimeMillis()
+                                        }
                                         isRunning = true
                                         isPaused = false
                                     } else {
@@ -530,6 +596,9 @@ fun ActiveRunScreen(
                                         )
                                     }
                                 } else {
+                                    if (sessionStartedAtMillis == 0L) {
+                                        sessionStartedAtMillis = System.currentTimeMillis()
+                                    }
                                     isRunning = true
                                     isPaused = false
                                 }
@@ -547,17 +616,29 @@ fun ActiveRunScreen(
                                 isRunning = false
                                 isFinished = true
                                 coroutineScope.launch {
+                                    if (activePauseStartedAtMillis > 0L) {
+                                        pauseSegments += RunPauseSegment(
+                                            startedAtMillis = activePauseStartedAtMillis,
+                                            endedAtMillis = System.currentTimeMillis(),
+                                            startedAtElapsedSeconds = activePauseStartedAtElapsedSeconds,
+                                            endedAtElapsedSeconds = totalDurationSeconds
+                                        )
+                                        activePauseStartedAtMillis = 0L
+                                        activePauseStartedAtElapsedSeconds = 0L
+                                    }
                                     appendStepSummaryIfNeeded(
                                         summaries = completedStepSummaries,
                                         state = engineState,
                                         stepDistanceMeters = stepDistanceMeters,
                                         stepDurationSeconds = stepDurationSeconds
                                     )
+                                    val sessionId = UUID.randomUUID().toString()
+                                    val finishedAtMillis = System.currentTimeMillis()
                                     historyRepository.saveSession(
                                         RunSessionSummary(
-                                            id = UUID.randomUUID().toString(),
+                                            id = sessionId,
                                             workoutName = workoutPlan.name,
-                                            finishedAtMillis = System.currentTimeMillis(),
+                                            finishedAtMillis = finishedAtMillis,
                                             totalDistanceMeters = totalDistanceMeters,
                                             totalDurationSeconds = totalDurationSeconds,
                                             averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
@@ -565,6 +646,20 @@ fun ActiveRunScreen(
                                                 durationSeconds = totalDurationSeconds
                                             ),
                                             stepSummaries = completedStepSummaries.toList()
+                                        )
+                                    )
+                                    activityRepository.saveSession(
+                                        buildRunSession(
+                                            id = sessionId,
+                                            workoutPlanId = workoutPlan.id,
+                                            workoutName = workoutPlan.name,
+                                            startedAtMillis = sessionStartedAtMillis,
+                                            finishedAtMillis = finishedAtMillis,
+                                            totalDistanceMeters = totalDistanceMeters,
+                                            totalDurationSeconds = totalDurationSeconds,
+                                            stepSummaries = completedStepSummaries,
+                                            pauseSegments = pauseSegments,
+                                            telemetryRecorder = telemetryRecorder
                                         )
                                     )
                                     onFinish()
@@ -848,6 +943,96 @@ private fun appendStepSummaryIfNeeded(
     )
 }
 
+private fun buildRunSession(
+    id: String,
+    workoutPlanId: String,
+    workoutName: String,
+    startedAtMillis: Long,
+    finishedAtMillis: Long,
+    totalDistanceMeters: Double,
+    totalDurationSeconds: Long,
+    stepSummaries: List<RunStepSummary>,
+    pauseSegments: List<RunPauseSegment>,
+    telemetryRecorder: RunTelemetryRecorder
+): RunSession {
+    val telemetry = telemetryRecorder.snapshot(
+        totalDistanceMeters = totalDistanceMeters,
+        totalDurationSeconds = totalDurationSeconds
+    )
+    val pausedDurationSeconds = pauseSegments.sumOf { it.durationSeconds ?: 0L }
+
+    return RunSession(
+        id = id,
+        workoutPlanId = workoutPlanId,
+        workoutName = workoutName,
+        startTimeMillis = startedAtMillis.takeIf { it > 0L }
+            ?: (finishedAtMillis - (totalDurationSeconds + pausedDurationSeconds) * 1_000L),
+        endTimeMillis = finishedAtMillis,
+        totalDistanceMeters = totalDistanceMeters,
+        totalDurationSeconds = totalDurationSeconds,
+        averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
+            distanceMeters = totalDistanceMeters,
+            durationSeconds = totalDurationSeconds
+        ),
+        stepResults = stepSummaries.mapIndexed { index, summary ->
+            RunStepResult(
+                stepId = "step-$index",
+                stepName = summary.stepName,
+                distanceMeters = summary.distanceMeters,
+                durationSeconds = summary.durationSeconds,
+                averagePaceSecondsPerKm = summary.averagePaceSecondsPerKm,
+                targetPaceSecondsPerKm = null,
+                complianceStatus = summary.paceStatus,
+                stepIndex = index
+            )
+        },
+        status = RunSessionStatus.FINISHED,
+        elapsedDurationSeconds = totalDurationSeconds + pausedDurationSeconds,
+        pausedDurationSeconds = pausedDurationSeconds,
+        averageSpeedKmh = telemetry.averageSpeedKmh,
+        maxSpeedKmh = telemetry.maxSpeedKmh,
+        estimatedCalories = estimatedCalories(totalDistanceMeters),
+        kilometerSplits = telemetry.kilometerSplits,
+        routePoints = telemetry.routePoints,
+        pauseSegments = pauseSegments.toList()
+    )
+}
+
+private fun routePointFor(
+    locationState: RunLocationState,
+    elapsedSeconds: Long,
+    totalDistanceMeters: Double,
+    useGpsMode: Boolean
+): RunRoutePoint? {
+    if (!useGpsMode) {
+        return null
+    }
+
+    val latitude = locationState.latitude ?: return null
+    val longitude = locationState.longitude ?: return null
+
+    return RunRoutePoint(
+        latitude = latitude,
+        longitude = longitude,
+        recordedAtMillis = locationState.timestampMillis.takeIf { it > 0L } ?: System.currentTimeMillis(),
+        elapsedSeconds = elapsedSeconds,
+        distanceMeters = totalDistanceMeters,
+        accuracyMeters = locationState.accuracyMeters,
+        altitudeMeters = locationState.altitudeMeters,
+        speedMetersPerSecond = locationState.speedMetersPerSecond
+    )
+}
+
+private fun speedKmhFor(paceSecondsPerKm: Int?, metersThisSecond: Double): Double? {
+    if (paceSecondsPerKm != null && paceSecondsPerKm > 0) {
+        return SECONDS_PER_HOUR / paceSecondsPerKm
+    }
+    if (metersThisSecond > 0.0) {
+        return metersThisSecond * 3.6
+    }
+    return null
+}
+
 private data class ActivityBackground(
     val label: String,
     val resId: Int
@@ -864,3 +1049,4 @@ private val activityBackgrounds = listOf(
 
 private const val METERS_PER_KILOMETER = 1000.0
 private const val DEFAULT_SIMULATED_PACE_SECONDS_PER_KM = 420
+private const val SECONDS_PER_HOUR = 3600.0
