@@ -9,6 +9,7 @@ import androidx.navigation.NavType
 import com.otero.runningvoicecoach.ui.activeRun.ActiveRunScreen
 import com.otero.runningvoicecoach.ui.health.HealthScreen
 import com.otero.runningvoicecoach.ui.home.HomeScreen
+import com.otero.runningvoicecoach.ui.summary.ActivityResultScreen
 import com.otero.runningvoicecoach.ui.settings.SettingsScreen
 import com.otero.runningvoicecoach.ui.summary.RunSummaryScreen
 import com.otero.runningvoicecoach.ui.workouts.WorkoutEditorScreen
@@ -89,7 +90,19 @@ fun RunningVoiceCoachNavHost() {
                 onBack = { navController.popBackStack() },
                 onFinish = {
                     navController.popBackStack()
+                    navController.navigate(Screen.ActivityResult.route) {
+                        launchSingleTop = true
+                    }
                 }
+            )
+        }
+        composable(Screen.ActivityResult.route) {
+            ActivityResultScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = goProgress,
+                onHealth = goHealth,
+                onProfile = goProfile
             )
         }
         composable(Screen.RunSummary.route) {

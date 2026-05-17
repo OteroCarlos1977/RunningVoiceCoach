@@ -305,6 +305,7 @@ fun ActiveRunScreen(
                 )
                 isFinished = true
                 isRunning = false
+                onFinish()
             } else if (nextState.shouldMoveToNextStep) {
                 appendStepSummaryIfNeeded(
                     summaries = completedStepSummaries,
