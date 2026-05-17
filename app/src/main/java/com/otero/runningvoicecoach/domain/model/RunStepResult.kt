@@ -7,5 +7,11 @@ data class RunStepResult(
     val durationSeconds: Long,
     val averagePaceSecondsPerKm: Int?,
     val targetPaceSecondsPerKm: Int?,
-    val complianceStatus: PaceStatus
+    val complianceStatus: PaceStatus,
+    val stepIndex: Int? = null,
+    val stepType: StepType? = null,
+    val targetType: TargetType? = null,
+    val targetValue: Double? = null,
+    val startedAtElapsedSeconds: Long? = null,
+    val endedAtElapsedSeconds: Long? = null
 )
