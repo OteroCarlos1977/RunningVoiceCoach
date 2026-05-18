@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.play.services.location)
     implementation(libs.okhttp)
+    implementation(libs.osmdroid.android)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

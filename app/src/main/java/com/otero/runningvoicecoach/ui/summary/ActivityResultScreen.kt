@@ -24,9 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -49,6 +49,13 @@ import com.otero.runningvoicecoach.domain.pace.PaceCalculator
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 import com.otero.runningvoicecoach.ui.components.BottomTab
 import com.otero.runningvoicecoach.ui.components.RunnersBottomBar
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -226,49 +233,64 @@ private fun RoutePreviewCard(points: List<RunRoutePoint>, onOpenMap: () -> Unit)
                     )
                 }
             } else {
-                RouteCanvas(points = points, modifier = Modifier.fillMaxSize())
+                RouteMapView(points = points, modifier = Modifier.fillMaxSize())
             }
         }
     }
 }
 
 @Composable
-private fun RouteCanvas(points: List<RunRoutePoint>, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val minLat = points.minOf { it.latitude }
-        val maxLat = points.maxOf { it.latitude }
-        val minLon = points.minOf { it.longitude }
-        val maxLon = points.maxOf { it.longitude }
-        val latRange = max(maxLat - minLat, 0.00001)
-        val lonRange = max(maxLon - minLon, 0.00001)
-        val padding = 16.dp.toPx()
-        val drawableWidth = size.width - padding * 2
-        val drawableHeight = size.height - padding * 2
-        val path = Path()
+private fun RouteMapView(points: List<RunRoutePoint>, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val geoPoints = remember(points) { points.map { GeoPoint(it.latitude, it.longitude) } }
 
-        points.forEachIndexed { index, point ->
-            val x = padding + ((point.longitude - minLon) / lonRange).toFloat() * drawableWidth
-            val y = padding + (1f - ((point.latitude - minLat) / latRange).toFloat()) * drawableHeight
-            if (index == 0) {
-                path.moveTo(x, y)
-            } else {
-                path.lineTo(x, y)
+    AndroidView(
+        modifier = modifier,
+        factory = {
+            Configuration.getInstance().userAgentValue = context.packageName
+            MapView(context).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                setMultiTouchControls(true)
+                minZoomLevel = 3.0
+                maxZoomLevel = 20.0
+            }
+        },
+        update = { map ->
+            map.overlays.clear()
+            if (geoPoints.isNotEmpty()) {
+                val route = Polyline().apply {
+                    setPoints(geoPoints)
+                    outlinePaint.color = android.graphics.Color.rgb(0, 91, 255)
+                    outlinePaint.strokeWidth = 8f
+                    outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
+                    outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
+                }
+                map.overlays.add(route)
+
+                map.overlays.add(
+                    Marker(map).apply {
+                        position = geoPoints.first()
+                        title = "Inicio"
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    }
+                )
+                map.overlays.add(
+                    Marker(map).apply {
+                        position = geoPoints.last()
+                        title = "Fin"
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    }
+                )
+
+                map.controller.setZoom(15.0)
+                map.controller.setCenter(geoPoints.first())
+                map.post {
+                    map.zoomToBoundingBox(geoPoints.toBoundingBox(), true, 64)
+                    map.invalidate()
+                }
             }
         }
-
-        drawRoundRect(color = Color(0xFFEAF4FF), cornerRadius = androidx.compose.ui.geometry.CornerRadius(18.dp.toPx()))
-        drawPath(path = path, color = ResultBlue, style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round))
-
-        val start = points.first()
-        val end = points.last()
-        fun pointOffset(point: RunRoutePoint): Offset {
-            val x = padding + ((point.longitude - minLon) / lonRange).toFloat() * drawableWidth
-            val y = padding + (1f - ((point.latitude - minLat) / latRange).toFloat()) * drawableHeight
-            return Offset(x, y)
-        }
-        drawCircle(color = ResultGreen, radius = 6.dp.toPx(), center = pointOffset(start))
-        drawCircle(color = ResultOrange, radius = 6.dp.toPx(), center = pointOffset(end))
-    }
+    )
 }
 
 @Composable
@@ -485,7 +507,7 @@ fun ActivityMapScreen(
                         if (latestSession.routePoints.size < 2) {
                             Text("Sin puntos GPS suficientes.", color = ResultMuted, modifier = Modifier.align(Alignment.Center))
                         } else {
-                            RouteCanvas(points = latestSession.routePoints, modifier = Modifier.fillMaxSize())
+                            RouteMapView(points = latestSession.routePoints, modifier = Modifier.fillMaxSize())
                         }
                     }
                 }
@@ -527,4 +549,13 @@ private fun formatSpeed(speedKmh: Double?): String {
 
 private fun formatSplitDistance(distanceMeters: Double): String {
     return if (distanceMeters >= 999.0) "1 km" else "${distanceMeters.toInt()} m"
+}
+
+private fun List<GeoPoint>.toBoundingBox(): BoundingBox {
+    return BoundingBox(
+        maxOf { it.latitude },
+        maxOf { it.longitude },
+        minOf { it.latitude },
+        minOf { it.longitude }
+    )
 }
