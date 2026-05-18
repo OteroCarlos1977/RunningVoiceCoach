@@ -10,8 +10,10 @@ sealed class Screen(val route: String, val title: String) {
         fun createRoute(workoutPlanId: String): String = "active-run/$workoutPlanId"
     }
     data object ActivityResult : Screen("activity-result", "Actividad")
+    data object ActivityMap : Screen("activity-map", "Recorrido")
     data object ActivityDistances : Screen("activity-distances", "Distancias")
     data object ActivityPaces : Screen("activity-paces", "Ritmos")
+    data object ActivityCalories : Screen("activity-calories", "Calorias")
     data object RunSummary : Screen("run-summary", "Resumen")
     data object Health : Screen("health", "Salud")
     data object Settings : Screen("settings", "Configuración")

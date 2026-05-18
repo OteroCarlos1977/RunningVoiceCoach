@@ -58,6 +58,7 @@ fun HomeScreen(
     onRecentActivity: () -> Unit,
     onDistanceSummary: () -> Unit,
     onPaceSummary: () -> Unit,
+    onCaloriesSummary: () -> Unit,
     onHealth: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -122,7 +123,8 @@ fun HomeScreen(
                         value = stats.totalCalories,
                         unit = "kcal",
                         footer = "Total estimado",
-                        accent = HomeOrange
+                        accent = HomeOrange,
+                        onClick = onCaloriesSummary
                     )
                     SummaryCard(
                         modifier = Modifier.weight(1f),

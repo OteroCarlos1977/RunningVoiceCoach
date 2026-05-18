@@ -3,6 +3,7 @@ package com.otero.runningvoicecoach.ui.summary
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +66,7 @@ fun ActivityResultScreen(
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
+    onOpenMap: () -> Unit,
     onHealth: () -> Unit,
     onProfile: () -> Unit
 ) {
@@ -89,8 +92,9 @@ fun ActivityResultScreen(
             ) {
                 ResultHeader()
                 ActivityHeroCard(session = latestSession)
-                RoutePreviewCard(points = latestSession.routePoints)
+                RoutePreviewCard(points = latestSession.routePoints, onOpenMap = onOpenMap)
                 ActivityMetricGrid(session = latestSession)
+                PaceAreaChartCard(splits = latestSession.kilometerSplits)
                 PaceSplitsCard(splits = latestSession.kilometerSplits)
             }
 
@@ -197,17 +201,21 @@ private fun HeroMetric(value: String, label: String) {
 }
 
 @Composable
-private fun RoutePreviewCard(points: List<RunRoutePoint>) {
+private fun RoutePreviewCard(points: List<RunRoutePoint>, onOpenMap: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(190.dp),
+            .height(280.dp)
+            .clickable(enabled = points.size >= 2, onClick = onOpenMap),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Recorrido GPS", color = ResultNavy, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Recorrido GPS", color = ResultNavy, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Ampliar  >", color = ResultBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
             if (points.size < 2) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
@@ -265,14 +273,19 @@ private fun RouteCanvas(points: List<RunRoutePoint>, modifier: Modifier = Modifi
 
 @Composable
 private fun ActivityMetricGrid(session: RunSession) {
+    val minSpeed = session.kilometerSplits.mapNotNull { it.averageSpeedKmh }.minOrNull()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            ResultMetricCard(modifier = Modifier.weight(1f), label = "Vel. media", value = formatSpeed(session.averageSpeedKmh), accent = ResultBlue)
-            ResultMetricCard(modifier = Modifier.weight(1f), label = "Vel. max.", value = formatSpeed(session.maxSpeedKmh), accent = ResultOrange)
+            ResultMetricCard(modifier = Modifier.weight(1f), label = "Tiempo", value = formatDuration(session.totalDurationSeconds), accent = ResultBlue)
+            ResultMetricCard(modifier = Modifier.weight(1f), label = "Distancia", value = "%.2f km".format(session.distanceKilometers), accent = ResultBlue)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            ResultMetricCard(modifier = Modifier.weight(1f), label = "Calorias", value = "${session.estimatedCalories ?: 0} kcal", accent = ResultOrange)
-            ResultMetricCard(modifier = Modifier.weight(1f), label = "Pausa", value = formatDuration(session.pausedDurationSeconds), accent = ResultMuted)
+            ResultMetricCard(modifier = Modifier.weight(1f), label = "Ritmo prom.", value = PaceCalculator.formatPace(session.averagePaceSecondsPerKm), accent = ResultBlue)
+            ResultMetricCard(modifier = Modifier.weight(1f), label = "Vel. prom.", value = formatSpeed(session.averageSpeedKmh), accent = ResultBlue)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            ResultMetricCard(modifier = Modifier.weight(1f), label = "Vel. max.", value = formatSpeed(session.maxSpeedKmh), accent = ResultOrange)
+            ResultMetricCard(modifier = Modifier.weight(1f), label = "Vel. min.", value = formatSpeed(minSpeed), accent = ResultMuted)
         }
     }
 }
@@ -302,7 +315,75 @@ private fun ResultMetricCard(modifier: Modifier, label: String, value: String, a
 }
 
 @Composable
+private fun PaceAreaChartCard(splits: List<RunKilometerSplit>) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(210.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Variabilidad del ritmo", color = ResultNavy, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            if (splits.size < 2) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay datos suficientes para graficar.", color = ResultMuted, fontSize = 13.sp)
+                }
+            } else {
+                PaceAreaChart(splits = splits, modifier = Modifier.fillMaxSize())
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaceAreaChart(splits: List<RunKilometerSplit>, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val values = splits.mapNotNull { it.averagePaceSecondsPerKm?.toFloat() }
+        if (values.size < 2) {
+            return@Canvas
+        }
+
+        val minValue = values.minOrNull() ?: return@Canvas
+        val maxValue = values.maxOrNull() ?: return@Canvas
+        val range = max(maxValue - minValue, 1f)
+        val leftPadding = 10.dp.toPx()
+        val rightPadding = 10.dp.toPx()
+        val topPadding = 8.dp.toPx()
+        val bottomPadding = 22.dp.toPx()
+        val chartWidth = size.width - leftPadding - rightPadding
+        val chartHeight = size.height - topPadding - bottomPadding
+        val linePath = Path()
+        val areaPath = Path()
+
+        values.forEachIndexed { index, value ->
+            val x = leftPadding + (index.toFloat() / (values.lastIndex).coerceAtLeast(1)) * chartWidth
+            val y = topPadding + ((value - minValue) / range) * chartHeight
+            if (index == 0) {
+                linePath.moveTo(x, y)
+                areaPath.moveTo(x, size.height - bottomPadding)
+                areaPath.lineTo(x, y)
+            } else {
+                linePath.lineTo(x, y)
+                areaPath.lineTo(x, y)
+            }
+            if (index == values.lastIndex) {
+                areaPath.lineTo(x, size.height - bottomPadding)
+                areaPath.close()
+            }
+        }
+
+        drawRoundRect(color = Color(0xFFEAF4FF), cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()))
+        drawPath(path = areaPath, brush = Brush.verticalGradient(listOf(ResultBlue.copy(alpha = 0.36f), ResultBlue.copy(alpha = 0.04f))), style = Fill)
+        drawPath(path = linePath, color = ResultBlue, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
+
+@Composable
 private fun PaceSplitsCard(splits: List<RunKilometerSplit>) {
+    val fastest = splits.mapNotNull { split -> split.averagePaceSecondsPerKm?.let { split to it } }.minByOrNull { it.second }?.first
+    val slowest = splits.mapNotNull { split -> split.averagePaceSecondsPerKm?.let { split to it } }.maxByOrNull { it.second }?.first
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -315,7 +396,15 @@ private fun PaceSplitsCard(splits: List<RunKilometerSplit>) {
                 Text("No hay parciales suficientes.", color = ResultMuted, fontSize = 13.sp)
             } else {
                 splits.take(12).forEach { split ->
-                    SplitRow(split = split, maxDurationSeconds = splits.maxOf { it.durationSeconds }.coerceAtLeast(1L))
+                    SplitRow(
+                        split = split,
+                        maxDurationSeconds = splits.maxOf { it.durationSeconds }.coerceAtLeast(1L),
+                        marker = when (split) {
+                            fastest -> "🐇"
+                            slowest -> "🐢"
+                            else -> null
+                        }
+                    )
                 }
             }
         }
@@ -323,7 +412,7 @@ private fun PaceSplitsCard(splits: List<RunKilometerSplit>) {
 }
 
 @Composable
-private fun SplitRow(split: RunKilometerSplit, maxDurationSeconds: Long) {
+private fun SplitRow(split: RunKilometerSplit, maxDurationSeconds: Long, marker: String?) {
     val barFraction = (split.durationSeconds.toFloat() / maxDurationSeconds.toFloat()).coerceIn(0.18f, 1f)
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -339,7 +428,10 @@ private fun SplitRow(split: RunKilometerSplit, maxDurationSeconds: Long) {
                     .background(Color(0xFFE1EAF5), RoundedCornerShape(7.dp))
             )
             Text(
-                text = PaceCalculator.formatPace(split.averagePaceSecondsPerKm),
+                text = buildString {
+                    append(PaceCalculator.formatPace(split.averagePaceSecondsPerKm))
+                    if (marker != null) append("  $marker")
+                },
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 10.dp),
@@ -349,6 +441,68 @@ private fun SplitRow(split: RunKilometerSplit, maxDurationSeconds: Long) {
             )
         }
         Text(formatSplitDistance(split.distanceMeters), color = ResultMuted, fontSize = 12.sp, modifier = Modifier.width(48.dp))
+    }
+}
+
+@Composable
+fun ActivityMapScreen(
+    onHome: () -> Unit,
+    onRoutines: () -> Unit,
+    onProgress: () -> Unit,
+    onHealth: () -> Unit,
+    onProfile: () -> Unit
+) {
+    val context = LocalContext.current
+    val repository = remember { RunActivityRepository(context.applicationContext) }
+    val sessions by repository.sessions.collectAsState(initial = emptyList())
+    val latestSession = sessions.firstOrNull() ?: remember { demoRunSession() }
+
+    AppScaffold(title = "Recorrido", showTopBar = false) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(ResultSoft)
+                .padding(padding)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 30.dp, bottom = 108.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                ResultHeader()
+                Text("Recorrido GPS", color = ResultNavy, fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                ) {
+                    Box(modifier = Modifier.padding(16.dp).fillMaxSize()) {
+                        if (latestSession.routePoints.size < 2) {
+                            Text("Sin puntos GPS suficientes.", color = ResultMuted, modifier = Modifier.align(Alignment.Center))
+                        } else {
+                            RouteCanvas(points = latestSession.routePoints, modifier = Modifier.fillMaxSize())
+                        }
+                    }
+                }
+            }
+
+            RunnersBottomBar(
+                selected = BottomTab.PROGRESS,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                onHome = onHome,
+                onRoutines = onRoutines,
+                onProgress = onProgress,
+                onHealth = onHealth,
+                onProfile = onProfile
+            )
+        }
     }
 }
 

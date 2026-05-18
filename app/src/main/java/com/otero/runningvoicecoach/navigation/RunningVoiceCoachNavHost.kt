@@ -9,7 +9,9 @@ import androidx.navigation.NavType
 import com.otero.runningvoicecoach.ui.activeRun.ActiveRunScreen
 import com.otero.runningvoicecoach.ui.health.HealthScreen
 import com.otero.runningvoicecoach.ui.home.HomeScreen
+import com.otero.runningvoicecoach.ui.summary.ActivityCaloriesSummaryScreen
 import com.otero.runningvoicecoach.ui.summary.ActivityDistanceSummaryScreen
+import com.otero.runningvoicecoach.ui.summary.ActivityMapScreen
 import com.otero.runningvoicecoach.ui.summary.ActivityPaceSummaryScreen
 import com.otero.runningvoicecoach.ui.summary.ActivityResultScreen
 import com.otero.runningvoicecoach.ui.settings.SettingsScreen
@@ -40,6 +42,11 @@ fun RunningVoiceCoachNavHost() {
             launchSingleTop = true
         }
     }
+    val goActivityMap = {
+        navController.navigate(Screen.ActivityMap.route) {
+            launchSingleTop = true
+        }
+    }
     val goActivityDistances = {
         navController.navigate(Screen.ActivityDistances.route) {
             launchSingleTop = true
@@ -47,6 +54,11 @@ fun RunningVoiceCoachNavHost() {
     }
     val goActivityPaces = {
         navController.navigate(Screen.ActivityPaces.route) {
+            launchSingleTop = true
+        }
+    }
+    val goActivityCalories = {
+        navController.navigate(Screen.ActivityCalories.route) {
             launchSingleTop = true
         }
     }
@@ -72,6 +84,7 @@ fun RunningVoiceCoachNavHost() {
                 onRecentActivity = goRecentActivity,
                 onDistanceSummary = goActivityDistances,
                 onPaceSummary = goActivityPaces,
+                onCaloriesSummary = goActivityCalories,
                 onHealth = goHealth,
                 onSettings = goProfile
             )
@@ -115,6 +128,16 @@ fun RunningVoiceCoachNavHost() {
                 onHome = goHome,
                 onRoutines = goRoutines,
                 onProgress = goProgress,
+                onOpenMap = goActivityMap,
+                onHealth = goHealth,
+                onProfile = goProfile
+            )
+        }
+        composable(Screen.ActivityMap.route) {
+            ActivityMapScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = goProgress,
                 onHealth = goHealth,
                 onProfile = goProfile
             )
@@ -130,6 +153,15 @@ fun RunningVoiceCoachNavHost() {
         }
         composable(Screen.ActivityPaces.route) {
             ActivityPaceSummaryScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = goProgress,
+                onHealth = goHealth,
+                onProfile = goProfile
+            )
+        }
+        composable(Screen.ActivityCalories.route) {
+            ActivityCaloriesSummaryScreen(
                 onHome = goHome,
                 onRoutines = goRoutines,
                 onProgress = goProgress,

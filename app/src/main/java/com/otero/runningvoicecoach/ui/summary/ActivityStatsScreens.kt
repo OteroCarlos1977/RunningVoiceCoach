@@ -100,6 +100,32 @@ fun ActivityPaceSummaryScreen(
 }
 
 @Composable
+fun ActivityCaloriesSummaryScreen(
+    onHome: () -> Unit,
+    onRoutines: () -> Unit,
+    onProgress: () -> Unit,
+    onHealth: () -> Unit,
+    onProfile: () -> Unit
+) {
+    val activities = rememberActivities()
+    val totalCalories = activities.sumOf { it.estimatedCalories ?: estimatedCalories(it.totalDistanceMeters) }
+
+    ActivityStatsScaffold(
+        title = "Calorias",
+        subtitle = "$totalCalories kcal acumuladas",
+        onHome = onHome,
+        onRoutines = onRoutines,
+        onProgress = onProgress,
+        onHealth = onHealth,
+        onProfile = onProfile
+    ) {
+        activities.forEach { activity ->
+            ActivityCaloriesRow(activity = activity)
+        }
+    }
+}
+
+@Composable
 private fun rememberActivities(): List<RunSession> {
     val context = LocalContext.current
     val repository = remember { RunActivityRepository(context.applicationContext) }
@@ -227,6 +253,29 @@ private fun ActivityPaceRow(activity: RunSession) {
 }
 
 @Composable
+private fun ActivityCaloriesRow(activity: RunSession) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(activity.workoutName.ifBlank { "Actividad" }, color = StatsNavy, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(formatDate(activity.endTimeMillis ?: activity.startTimeMillis), color = StatsMuted, fontSize = 12.sp)
+                Text("%.2f km · ${formatDuration(activity.totalDurationSeconds)}".format(activity.distanceKilometers), color = StatsBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            Text("${activity.estimatedCalories ?: estimatedCalories(activity.totalDistanceMeters)} kcal", color = StatsOrange, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
 private fun SpeedStat(label: String, value: String, color: Color = StatsBlue) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = StatsMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -251,4 +300,8 @@ private fun formatDuration(totalSeconds: Long): String {
 
 private fun formatSpeed(speedKmh: Double?): String {
     return if (speedKmh == null) "0.0" else "%.1f".format(speedKmh)
+}
+
+private fun estimatedCalories(distanceMeters: Double): Int {
+    return (distanceMeters / 1000.0 * 70.0).toInt().coerceAtLeast(0)
 }
