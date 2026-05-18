@@ -103,7 +103,7 @@ fun ActivityResultScreen(
                 ActivityHeroCard(session = latestSession)
                 RoutePreviewCard(points = latestSession.routePoints, onOpenMap = onOpenMap)
                 ActivityMetricGrid(session = latestSession)
-                PaceAreaChartCard(splits = latestSession.kilometerSplits)
+                PaceAreaChartCard(session = latestSession)
                 PaceSplitsCard(splits = latestSession.kilometerSplits)
             }
 
@@ -339,11 +339,14 @@ private fun ResultMetricCard(modifier: Modifier, label: String, value: String, a
 }
 
 @Composable
-private fun PaceAreaChartCard(splits: List<RunKilometerSplit>) {
-    val values = splits.mapNotNull { it.averagePaceSecondsPerKm }
+private fun PaceAreaChartCard(session: RunSession) {
+    val samples = remember(session.routePoints, session.totalDurationSeconds) {
+        buildTwoMinutePaceSamples(session.routePoints, session.totalDurationSeconds)
+    }
+    val values = samples.map { it.paceSecondsPerKm }
     val fastest = values.minOrNull()
     val slowest = values.maxOrNull()
-    val average = values.takeIf { it.isNotEmpty() }?.average()
+    val average = session.averagePaceSecondsPerKm ?: values.takeIf { it.isNotEmpty() }?.average()?.roundToInt()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -356,16 +359,16 @@ private fun PaceAreaChartCard(splits: List<RunKilometerSplit>) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                 Column {
                     Text("Variabilidad del ritmo", color = ResultNavy, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    Text("min/km por parcial", color = ResultMuted, fontSize = 12.sp)
+                    Text("lecturas cada 2 min", color = ResultMuted, fontSize = 12.sp)
                 }
                 if (average != null) {
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(PaceCalculator.formatPace(average.roundToInt()), color = ResultNavy, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("promedio", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(formatPaceCompact(average), color = ResultNavy, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text("media", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-            if (splits.size < 2) {
+            if (samples.size < 2) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No hay datos suficientes para graficar.", color = ResultMuted, fontSize = 13.sp)
                 }
@@ -383,19 +386,19 @@ private fun PaceAreaChartCard(splits: List<RunKilometerSplit>) {
                         verticalArrangement = Arrangement.SpaceBetween,
                         horizontalAlignment = Alignment.End
                     ) {
-                        Text(PaceCalculator.formatPace(fastest), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text(PaceCalculator.formatPace(average.roundToInt()), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text(PaceCalculator.formatPace(slowest), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(formatPaceCompact(fastest), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(formatPaceCompact(average), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(formatPaceCompact(slowest), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
-                    PaceAreaChart(splits = splits, modifier = Modifier.weight(1f).fillMaxSize())
+                    PaceAreaChart(samples = samples, modifier = Modifier.weight(1f).fillMaxSize())
                 }
                 Row(
                     modifier = Modifier.padding(start = 56.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Km ${splits.first().kilometer}", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text("${splits.size} parciales", color = ResultMuted, fontSize = 11.sp)
-                    Text("Km ${splits.last().kilometer}", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("${samples.first().elapsedMinutes} min", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("cada 2 min", color = ResultMuted, fontSize = 11.sp)
+                    Text("${samples.last().elapsedMinutes} min", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -407,9 +410,9 @@ private fun PaceAreaChartCard(splits: List<RunKilometerSplit>) {
 }
 
 @Composable
-private fun PaceAreaChart(splits: List<RunKilometerSplit>, modifier: Modifier = Modifier) {
+private fun PaceAreaChart(samples: List<PaceChartSample>, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
-        val values = splits.mapNotNull { it.averagePaceSecondsPerKm?.toFloat() }
+        val values = samples.map { it.paceSecondsPerKm.toFloat() }
         if (values.size < 2) {
             return@Canvas
         }
@@ -434,6 +437,15 @@ private fun PaceAreaChart(splits: List<RunKilometerSplit>, modifier: Modifier = 
                 color = Color(0xFFDDE8F7),
                 start = Offset(leftPadding, y),
                 end = Offset(size.width - rightPadding, y),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+        samples.forEachIndexed { index, _ ->
+            val x = leftPadding + (index.toFloat() / (samples.lastIndex).coerceAtLeast(1)) * chartWidth
+            drawLine(
+                color = Color(0xFFE6EEF9),
+                start = Offset(x, topPadding),
+                end = Offset(x, size.height - bottomPadding),
                 strokeWidth = 1.dp.toPx()
             )
         }
@@ -608,6 +620,45 @@ fun ActivityMapScreen(
     }
 }
 
+private data class PaceChartSample(
+    val elapsedMinutes: Long,
+    val paceSecondsPerKm: Int
+)
+
+private fun buildTwoMinutePaceSamples(points: List<RunRoutePoint>, totalDurationSeconds: Long): List<PaceChartSample> {
+    if (points.size < 2 || totalDurationSeconds < TWO_MINUTES_SECONDS) {
+        return emptyList()
+    }
+
+    val ordered = points.sortedBy { it.elapsedSeconds }
+    return generateSequence(TWO_MINUTES_SECONDS) { it + TWO_MINUTES_SECONDS }
+        .takeWhile { it <= totalDurationSeconds }
+        .mapNotNull { endSeconds ->
+            val startSeconds = endSeconds - TWO_MINUTES_SECONDS
+            val startDistance = distanceAtSecond(ordered, startSeconds)
+            val endDistance = distanceAtSecond(ordered, endSeconds)
+            val distanceMeters = endDistance - startDistance
+            if (distanceMeters < 20.0) {
+                null
+            } else {
+                val paceSeconds = (TWO_MINUTES_SECONDS / (distanceMeters / 1000.0)).roundToInt()
+                PaceChartSample(elapsedMinutes = endSeconds / 60L, paceSecondsPerKm = paceSeconds)
+            }
+        }
+        .toList()
+}
+
+private fun distanceAtSecond(points: List<RunRoutePoint>, targetSeconds: Long): Double {
+    val before = points.lastOrNull { it.elapsedSeconds <= targetSeconds } ?: return points.first().distanceMeters
+    val after = points.firstOrNull { it.elapsedSeconds >= targetSeconds } ?: return points.last().distanceMeters
+    if (after.elapsedSeconds == before.elapsedSeconds) {
+        return before.distanceMeters
+    }
+
+    val progress = (targetSeconds - before.elapsedSeconds).toDouble() / (after.elapsedSeconds - before.elapsedSeconds).toDouble()
+    return before.distanceMeters + (after.distanceMeters - before.distanceMeters) * progress.coerceIn(0.0, 1.0)
+}
+
 private fun formatDate(timeMillis: Long): String {
     return SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(timeMillis))
 }
@@ -631,6 +682,16 @@ private fun formatSplitDistance(distanceMeters: Double): String {
     return if (distanceMeters >= 999.0) "1 km" else "${distanceMeters.toInt()} m"
 }
 
+private fun formatPaceCompact(secondsPerKm: Int?): String {
+    if (secondsPerKm == null || secondsPerKm < 0) {
+        return "--:--"
+    }
+
+    val minutes = secondsPerKm / 60
+    val seconds = secondsPerKm % 60
+    return "%d:%02d".format(minutes, seconds)
+}
+
 private fun List<GeoPoint>.toBoundingBox(): BoundingBox {
     return BoundingBox(
         maxOf { it.latitude },
@@ -639,3 +700,5 @@ private fun List<GeoPoint>.toBoundingBox(): BoundingBox {
         minOf { it.longitude }
     )
 }
+
+private const val TWO_MINUTES_SECONDS = 120L
