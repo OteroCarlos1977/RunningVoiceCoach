@@ -33,6 +33,11 @@ fun RunningVoiceCoachNavHost() {
             launchSingleTop = true
         }
     }
+    val goRecentActivity = {
+        navController.navigate(Screen.ActivityResult.route) {
+            launchSingleTop = true
+        }
+    }
     val startDefaultRun = {
         navController.navigate(Screen.ActiveRun.createRoute("simulacion-ritmo-7min")) {
             launchSingleTop = true
@@ -58,6 +63,7 @@ fun RunningVoiceCoachNavHost() {
                 onNewRun = startDefaultRun,
                 onWorkouts = goRoutines,
                 onHistory = goProgress,
+                onRecentActivity = goRecentActivity,
                 onHealth = goHealth,
                 onSettings = goProfile
             )

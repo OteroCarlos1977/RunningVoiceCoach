@@ -2,6 +2,7 @@ package com.otero.runningvoicecoach.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +57,7 @@ fun HomeScreen(
     onNewRun: () -> Unit,
     onWorkouts: () -> Unit,
     onHistory: () -> Unit,
+    onRecentActivity: () -> Unit,
     onHealth: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -78,7 +80,7 @@ fun HomeScreen(
                 Greeting()
                 GoalHero()
 
-                SectionHeader(title = "Resumen de hoy", action = "Ver mas")
+                SectionHeader(title = "Resumen de hoy", action = "Ver actividad", onAction = onRecentActivity)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -272,7 +274,8 @@ private fun GoalHero() {
 @Composable
 private fun SectionHeader(
     title: String,
-    action: String
+    action: String,
+    onAction: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -287,6 +290,7 @@ private fun SectionHeader(
         )
         Text(
             text = "$action  >",
+            modifier = if (onAction != null) Modifier.clickable(onClick = onAction) else Modifier,
             style = MaterialTheme.typography.titleSmall,
             color = HomeBlue,
             fontWeight = FontWeight.Bold
