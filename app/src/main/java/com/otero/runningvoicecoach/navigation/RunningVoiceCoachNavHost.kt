@@ -135,6 +135,7 @@ fun RunningVoiceCoachNavHost() {
         }
         composable(Screen.ActivityMap.route) {
             ActivityMapScreen(
+                onBack = { navController.popBackStack() },
                 onHome = goHome,
                 onRoutines = goRoutines,
                 onProgress = goProgress,

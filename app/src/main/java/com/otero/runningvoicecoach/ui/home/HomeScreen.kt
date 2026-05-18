@@ -254,7 +254,6 @@ private fun LastActivityCard(activity: RunSession, onClick: () -> Unit) {
                 ) {
                     HeroMetric("%.2f".format(activity.distanceKilometers), "km")
                     HeroMetric(formatDuration(activity.totalDurationSeconds), "tiempo")
-                    Text("Ver detalle  >", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

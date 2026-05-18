@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -60,6 +61,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 private val ResultNavy = Color(0xFF06245A)
 private val ResultBlue = Color(0xFF006DE5)
@@ -338,22 +340,67 @@ private fun ResultMetricCard(modifier: Modifier, label: String, value: String, a
 
 @Composable
 private fun PaceAreaChartCard(splits: List<RunKilometerSplit>) {
+    val values = splits.mapNotNull { it.averagePaceSecondsPerKm }
+    val fastest = values.minOrNull()
+    val slowest = values.maxOrNull()
+    val average = values.takeIf { it.isNotEmpty() }?.average()
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(210.dp),
+            .height(268.dp),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Variabilidad del ritmo", color = ResultNavy, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                Column {
+                    Text("Variabilidad del ritmo", color = ResultNavy, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("min/km por parcial", color = ResultMuted, fontSize = 12.sp)
+                }
+                if (average != null) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(PaceCalculator.formatPace(average.roundToInt()), color = ResultNavy, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("promedio", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
             if (splits.size < 2) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No hay datos suficientes para graficar.", color = ResultMuted, fontSize = 13.sp)
                 }
+            } else if (fastest != null && slowest != null && average != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(146.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .width(48.dp)
+                            .height(146.dp),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(PaceCalculator.formatPace(fastest), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(PaceCalculator.formatPace(average.roundToInt()), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(PaceCalculator.formatPace(slowest), color = ResultMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    PaceAreaChart(splits = splits, modifier = Modifier.weight(1f).fillMaxSize())
+                }
+                Row(
+                    modifier = Modifier.padding(start = 56.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Km ${splits.first().kilometer}", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("${splits.size} parciales", color = ResultMuted, fontSize = 11.sp)
+                    Text("Km ${splits.last().kilometer}", color = ResultMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
             } else {
-                PaceAreaChart(splits = splits, modifier = Modifier.fillMaxSize())
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay datos suficientes para graficar.", color = ResultMuted, fontSize = 13.sp)
+                }
             }
         }
     }
@@ -370,18 +417,31 @@ private fun PaceAreaChart(splits: List<RunKilometerSplit>, modifier: Modifier = 
         val minValue = values.minOrNull() ?: return@Canvas
         val maxValue = values.maxOrNull() ?: return@Canvas
         val range = max(maxValue - minValue, 1f)
-        val leftPadding = 10.dp.toPx()
+        val leftPadding = 8.dp.toPx()
         val rightPadding = 10.dp.toPx()
-        val topPadding = 8.dp.toPx()
-        val bottomPadding = 22.dp.toPx()
+        val topPadding = 12.dp.toPx()
+        val bottomPadding = 20.dp.toPx()
         val chartWidth = size.width - leftPadding - rightPadding
         val chartHeight = size.height - topPadding - bottomPadding
         val linePath = Path()
         val areaPath = Path()
+        val points = mutableListOf<Offset>()
+
+        drawRoundRect(color = Color(0xFFF3F7FF), cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()))
+        repeat(4) { index ->
+            val y = topPadding + (index / 3f) * chartHeight
+            drawLine(
+                color = Color(0xFFDDE8F7),
+                start = Offset(leftPadding, y),
+                end = Offset(size.width - rightPadding, y),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
 
         values.forEachIndexed { index, value ->
             val x = leftPadding + (index.toFloat() / (values.lastIndex).coerceAtLeast(1)) * chartWidth
             val y = topPadding + ((value - minValue) / range) * chartHeight
+            points.add(Offset(x, y))
             if (index == 0) {
                 linePath.moveTo(x, y)
                 areaPath.moveTo(x, size.height - bottomPadding)
@@ -396,9 +456,12 @@ private fun PaceAreaChart(splits: List<RunKilometerSplit>, modifier: Modifier = 
             }
         }
 
-        drawRoundRect(color = Color(0xFFEAF4FF), cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()))
         drawPath(path = areaPath, brush = Brush.verticalGradient(listOf(ResultBlue.copy(alpha = 0.36f), ResultBlue.copy(alpha = 0.04f))), style = Fill)
         drawPath(path = linePath, color = ResultBlue, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
+        points.forEach { point ->
+            drawCircle(color = Color.White, radius = 5.dp.toPx(), center = point)
+            drawCircle(color = ResultBlue, radius = 3.dp.toPx(), center = point)
+        }
     }
 }
 
@@ -468,6 +531,7 @@ private fun SplitRow(split: RunKilometerSplit, maxDurationSeconds: Long, marker:
 
 @Composable
 fun ActivityMapScreen(
+    onBack: () -> Unit,
     onHome: () -> Unit,
     onRoutines: () -> Unit,
     onProgress: () -> Unit,
@@ -494,7 +558,23 @@ fun ActivityMapScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 ResultHeader()
-                Text("Recorrido GPS", color = ResultNavy, fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Recorrido GPS", color = ResultNavy, fontSize = 34.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold)
+                    Surface(
+                        modifier = Modifier.clickable(onClick = onBack),
+                        shape = RoundedCornerShape(50),
+                        color = Color.White,
+                        shadowElevation = 5.dp
+                    ) {
+                        Text(
+                            text = "Volver",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            color = ResultBlue,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
