@@ -6,61 +6,68 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
+import com.otero.runningvoicecoach.data.session.RunActivityRepository
+import com.otero.runningvoicecoach.domain.model.RunSession
+import com.otero.runningvoicecoach.domain.pace.PaceCalculator
 import com.otero.runningvoicecoach.ui.components.AppScaffold
 import com.otero.runningvoicecoach.ui.components.BottomTab
 import com.otero.runningvoicecoach.ui.components.RunnersBottomBar
+import com.otero.runningvoicecoach.ui.summary.demoRunSession
 
 private val HomeNavy = Color(0xFF06245A)
 private val HomeBlue = Color(0xFF006DE5)
-private val HomeCyan = Color(0xFF16C7E8)
 private val HomeOrange = Color(0xFFFF6A00)
 private val HomeSoft = Color(0xFFF7FAFF)
 private val HomeTextMuted = Color(0xFF577095)
+private val HomeTeal = Color(0xFF00A8A8)
 
 @Composable
 fun HomeScreen(
-    onNewRun: () -> Unit,
     onWorkouts: () -> Unit,
     onHistory: () -> Unit,
     onRecentActivity: () -> Unit,
+    onDistanceSummary: () -> Unit,
+    onPaceSummary: () -> Unit,
     onHealth: () -> Unit,
     onSettings: () -> Unit
 ) {
+    val context = LocalContext.current
+    val repository = remember { RunActivityRepository(context.applicationContext) }
+    val storedActivities by repository.sessions.collectAsState(initial = emptyList())
+    val activities = if (storedActivities.isEmpty()) listOf(remember { demoRunSession() }) else storedActivities
+    val latestActivity = activities.first()
+    val stats = remember(activities) { HomeStats.from(activities) }
+
     AppScaffold(title = "", showTopBar = false) { padding ->
         Box(
             modifier = Modifier
@@ -74,13 +81,11 @@ fun HomeScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
                     .padding(top = 34.dp, bottom = 104.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 HeaderRow()
                 Greeting()
-                GoalHero()
-
-                SectionHeader(title = "Resumen de hoy", action = "Ver actividad", onAction = onRecentActivity)
+                LastActivityCard(activity = latestActivity, onClick = onRecentActivity)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -89,19 +94,21 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f),
                         icon = "⌖",
                         label = "DISTANCIA",
-                        value = "0.0",
+                        value = stats.totalDistance,
                         unit = "km",
-                        footer = "Meta: 10.00 km",
-                        accent = HomeBlue
+                        footer = "${activities.size} actividades",
+                        accent = HomeBlue,
+                        onClick = onDistanceSummary
                     )
                     SummaryCard(
                         modifier = Modifier.weight(1f),
                         icon = "◴",
                         label = "RITMO PROM.",
-                        value = "--:--",
+                        value = stats.averagePace,
                         unit = "min/km",
-                        footer = "Sin actividad",
-                        accent = HomeBlue
+                        footer = "Promedio general",
+                        accent = HomeBlue,
+                        onClick = onPaceSummary
                     )
                 }
                 Row(
@@ -112,26 +119,22 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f),
                         icon = "🔥",
                         label = "CALORIAS",
-                        value = "0",
+                        value = stats.totalCalories,
                         unit = "kcal",
-                        footer = "Hoy",
+                        footer = "Total estimado",
                         accent = HomeOrange
                     )
                     SummaryCard(
                         modifier = Modifier.weight(1f),
                         icon = "♡",
                         label = "TIEMPO ACTIVO",
-                        value = "00:00",
-                        unit = "min",
-                        footer = "Meta: 60 min",
-                        accent = Color(0xFF00A8A8)
+                        value = stats.totalTime,
+                        unit = "hh:mm",
+                        footer = "Entrenando",
+                        accent = HomeTeal
                     )
                 }
-
-                BestPerformanceCard()
-
-                SectionHeader(title = "Proxima rutina", action = "Ver plan")
-                NextRoutineCard(onStart = onNewRun)
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             RunnersBottomBar(
@@ -178,7 +181,7 @@ private fun Greeting() {
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Listo para superar tus limites hoy.",
+            text = "Tu actividad, tus datos, tu progreso.",
             style = MaterialTheme.typography.titleMedium,
             color = HomeTextMuted
         )
@@ -186,13 +189,14 @@ private fun Greeting() {
 }
 
 @Composable
-private fun GoalHero() {
+private fun LastActivityCard(activity: RunSession, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(190.dp),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+            .height(210.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = HomeNavy),
         elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -201,7 +205,7 @@ private fun GoalHero() {
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.72f
+                alpha = 0.64f
             )
             Box(
                 modifier = Modifier
@@ -209,9 +213,9 @@ private fun GoalHero() {
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                Color.White,
-                                Color.White.copy(alpha = 0.86f),
-                                Color.White.copy(alpha = 0.18f)
+                                HomeNavy.copy(alpha = 0.96f),
+                                HomeNavy.copy(alpha = 0.72f),
+                                HomeNavy.copy(alpha = 0.22f)
                             )
                         )
                     )
@@ -222,49 +226,33 @@ private fun GoalHero() {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "HOY",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = HomeNavy.copy(alpha = 0.74f),
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Tu meta diaria",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = HomeTextMuted
-                    )
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = "7.36",
-                            style = MaterialTheme.typography.displayLarge,
-                            color = HomeNavy,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            modifier = Modifier.padding(start = 8.dp, bottom = 10.dp),
-                            text = "km",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = HomeNavy,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LinearProgressIndicator(
-                        progress = { 0.73f },
-                        modifier = Modifier
-                            .fillMaxWidth(0.58f)
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(50)),
-                        color = HomeOrange,
-                        trackColor = Color(0xFFE1EAF5)
+                    Text("ULTIMA ACTIVIDAD", color = Color.White.copy(alpha = 0.74f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = activityTitle(activity),
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        lineHeight = 34.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "73% de 10 km",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = HomeTextMuted
+                        text = activity.workoutName.ifBlank { "Running" },
+                        color = Color.White.copy(alpha = 0.78f),
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    HeroMetric("%.2f".format(activity.distanceKilometers), "km")
+                    HeroMetric(formatDuration(activity.totalDurationSeconds), "tiempo")
+                    Text("Ver detalle  >", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -272,29 +260,10 @@ private fun GoalHero() {
 }
 
 @Composable
-private fun SectionHeader(
-    title: String,
-    action: String,
-    onAction: (() -> Unit)? = null
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = HomeNavy,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "$action  >",
-            modifier = if (onAction != null) Modifier.clickable(onClick = onAction) else Modifier,
-            style = MaterialTheme.typography.titleSmall,
-            color = HomeBlue,
-            fontWeight = FontWeight.Bold
-        )
+private fun HeroMetric(value: String, label: String) {
+    Column {
+        Text(value, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(label.uppercase(), color = Color.White.copy(alpha = 0.66f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -306,10 +275,19 @@ private fun SummaryCard(
     unit: String,
     footer: String,
     accent: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
+    val cardModifier = if (onClick != null) {
+        modifier
+            .height(158.dp)
+            .clickable(onClick = onClick)
+    } else {
+        modifier.height(158.dp)
+    }
+
     Card(
-        modifier = modifier.height(158.dp),
+        modifier = cardModifier,
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
@@ -324,126 +302,63 @@ private fun SummaryCard(
             Text(text = icon, style = MaterialTheme.typography.headlineMedium, color = accent)
             Text(text = label, style = MaterialTheme.typography.labelMedium, color = HomeTextMuted, fontWeight = FontWeight.Bold)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = value, style = MaterialTheme.typography.headlineLarge, color = HomeNavy, fontWeight = FontWeight.Bold)
+                Text(text = value, style = MaterialTheme.typography.headlineLarge, color = HomeNavy, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(text = unit, style = MaterialTheme.typography.bodyMedium, color = HomeTextMuted)
             }
-            Text(text = footer, style = MaterialTheme.typography.bodySmall, color = accent)
+            Text(text = footer, style = MaterialTheme.typography.bodySmall, color = accent, maxLines = 1)
         }
     }
 }
 
-@Composable
-private fun BestPerformanceCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(132.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(18.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Resumen Mejor Tiempo", style = MaterialTheme.typography.titleMedium, color = HomeNavy, fontWeight = FontWeight.Bold)
-                Text("Tus mejores datos de todas las practicas.", style = MaterialTheme.typography.bodySmall, color = HomeTextMuted)
-                Text("6:10 min/km", style = MaterialTheme.typography.headlineMedium, color = HomeNavy, fontWeight = FontWeight.Bold)
-                Text("Mejor ritmo promedio", style = MaterialTheme.typography.bodySmall, color = HomeTextMuted)
-            }
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                BestMetric(label = "5K", value = "31:20")
-                BestMetric(label = "Dist.", value = "7.36 km")
-                BestMetric(label = "Activo", value = "45:28")
-            }
-        }
-    }
-}
-
-@Composable
-private fun BestMetric(
-    label: String,
-    value: String
+private data class HomeStats(
+    val totalDistance: String,
+    val averagePace: String,
+    val totalCalories: String,
+    val totalTime: String
 ) {
-    Surface(
-        color = Color(0xFFEAF4FF),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = HomeBlue, fontWeight = FontWeight.Bold)
-            Text(value, style = MaterialTheme.typography.labelLarge, color = HomeNavy, fontWeight = FontWeight.Bold)
+    companion object {
+        fun from(activities: List<RunSession>): HomeStats {
+            val totalDistanceMeters = activities.sumOf { it.totalDistanceMeters }
+            val totalDurationSeconds = activities.sumOf { it.totalDurationSeconds }
+            val totalCalories = activities.sumOf { it.estimatedCalories ?: estimatedCalories(it.totalDistanceMeters) }
+
+            return HomeStats(
+                totalDistance = "%.1f".format(totalDistanceMeters / 1000.0),
+                averagePace = PaceCalculator.formatPace(
+                    PaceCalculator.calculateAveragePaceSecondsPerKm(
+                        distanceMeters = totalDistanceMeters,
+                        durationSeconds = totalDurationSeconds
+                    )
+                ),
+                totalCalories = "%,d".format(totalCalories),
+                totalTime = formatHoursMinutes(totalDurationSeconds)
+            )
         }
     }
 }
 
-@Composable
-private fun NextRoutineCard(onStart: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(96.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = HomeNavy),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                color = HomeBlue
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("⌁", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "5K Intermedio",
-                    color = Color.White,
-                    fontSize = 19.sp,
-                    lineHeight = 21.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "35 min  |  Intermedio",
-                    color = Color.White.copy(alpha = 0.82f),
-                    fontSize = 13.sp,
-                    lineHeight = 15.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Button(
-                modifier = Modifier.height(44.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = HomeBlue),
-                contentPadding = PaddingValues(horizontal = 14.dp),
-                onClick = onStart
-            ) {
-                Text("Iniciar", fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            }
-        }
+private fun activityTitle(activity: RunSession): String {
+    val roundedKm = activity.distanceKilometers.toInt().coerceAtLeast(1)
+    return "${roundedKm}K"
+}
+
+private fun estimatedCalories(distanceMeters: Double): Int {
+    return (distanceMeters / 1000.0 * 70.0).toInt().coerceAtLeast(0)
+}
+
+private fun formatDuration(totalSeconds: Long): String {
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
     }
+}
+
+private fun formatHoursMinutes(totalSeconds: Long): String {
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    return "%d:%02d".format(hours, minutes)
 }

@@ -9,6 +9,8 @@ import androidx.navigation.NavType
 import com.otero.runningvoicecoach.ui.activeRun.ActiveRunScreen
 import com.otero.runningvoicecoach.ui.health.HealthScreen
 import com.otero.runningvoicecoach.ui.home.HomeScreen
+import com.otero.runningvoicecoach.ui.summary.ActivityDistanceSummaryScreen
+import com.otero.runningvoicecoach.ui.summary.ActivityPaceSummaryScreen
 import com.otero.runningvoicecoach.ui.summary.ActivityResultScreen
 import com.otero.runningvoicecoach.ui.settings.SettingsScreen
 import com.otero.runningvoicecoach.ui.summary.RunSummaryScreen
@@ -38,8 +40,13 @@ fun RunningVoiceCoachNavHost() {
             launchSingleTop = true
         }
     }
-    val startDefaultRun = {
-        navController.navigate(Screen.ActiveRun.createRoute("simulacion-ritmo-7min")) {
+    val goActivityDistances = {
+        navController.navigate(Screen.ActivityDistances.route) {
+            launchSingleTop = true
+        }
+    }
+    val goActivityPaces = {
+        navController.navigate(Screen.ActivityPaces.route) {
             launchSingleTop = true
         }
     }
@@ -60,10 +67,11 @@ fun RunningVoiceCoachNavHost() {
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNewRun = startDefaultRun,
                 onWorkouts = goRoutines,
                 onHistory = goProgress,
                 onRecentActivity = goRecentActivity,
+                onDistanceSummary = goActivityDistances,
+                onPaceSummary = goActivityPaces,
                 onHealth = goHealth,
                 onSettings = goProfile
             )
@@ -104,6 +112,24 @@ fun RunningVoiceCoachNavHost() {
         }
         composable(Screen.ActivityResult.route) {
             ActivityResultScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = goProgress,
+                onHealth = goHealth,
+                onProfile = goProfile
+            )
+        }
+        composable(Screen.ActivityDistances.route) {
+            ActivityDistanceSummaryScreen(
+                onHome = goHome,
+                onRoutines = goRoutines,
+                onProgress = goProgress,
+                onHealth = goHealth,
+                onProfile = goProfile
+            )
+        }
+        composable(Screen.ActivityPaces.route) {
+            ActivityPaceSummaryScreen(
                 onHome = goHome,
                 onRoutines = goRoutines,
                 onProgress = goProgress,
