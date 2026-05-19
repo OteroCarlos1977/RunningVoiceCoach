@@ -206,27 +206,10 @@ fun WorkoutEditorScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ModeButton(
-                        modifier = Modifier.weight(1f),
-                        text = "Plan entrenador",
-                        selected = routineMode == RoutineMode.COACH_PLAN,
-                        onClick = { routineMode = RoutineMode.COACH_PLAN }
-                    )
-                    ModeButton(
-                        modifier = Modifier.weight(1f),
-                        text = "Continuos",
-                        selected = routineMode == RoutineMode.CONTINUOUS,
-                        onClick = { routineMode = RoutineMode.CONTINUOUS }
-                    )
-                    ModeButton(
-                        modifier = Modifier.weight(1f),
-                        text = "Pasadas",
-                        selected = routineMode == RoutineMode.INTERVALS,
-                        onClick = { routineMode = RoutineMode.INTERVALS }
+                SectionCard {
+                    RoutineModeDropdown(
+                        selected = routineMode,
+                        onChange = { routineMode = it }
                     )
                 }
 
@@ -402,6 +385,57 @@ private fun TemplateDropdown(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RoutineModeDropdown(
+    selected: RoutineMode,
+    onChange: (RoutineMode) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            value = selected.label,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Tipo de rutina") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            RoutineMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(mode.label, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text(mode.help, fontSize = 12.sp, color = EditorMuted)
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onChange(mode)
+                    }
+                )
+            }
+        }
+    }
+    Text(
+        text = selected.help,
+        color = EditorMuted,
+        fontSize = 13.sp,
+        lineHeight = 17.sp
+    )
 }
 
 @Composable
@@ -922,10 +956,22 @@ private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-private enum class RoutineMode {
-    COACH_PLAN,
-    CONTINUOUS,
-    INTERVALS
+private enum class RoutineMode(
+    val label: String,
+    val help: String
+) {
+    COACH_PLAN(
+        label = "Plan del entrenador",
+        help = "Usa una plantilla o arma bloques mixtos por tiempo y distancia."
+    ),
+    CONTINUOUS(
+        label = "Bloques continuos",
+        help = "Ideal para fondos: por ejemplo 4 km suave + 2 km medio."
+    ),
+    INTERVALS(
+        label = "Pasadas con descanso",
+        help = "Ideal para series repetidas con pausa entre cada pasada."
+    )
 }
 
 private data class TrainingTemplateDraft(
