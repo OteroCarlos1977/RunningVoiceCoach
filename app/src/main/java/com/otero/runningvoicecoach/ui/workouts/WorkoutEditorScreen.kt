@@ -20,6 +20,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -41,6 +45,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.otero.runningvoicecoach.R
@@ -58,6 +64,7 @@ private val EditorBlue = Color(0xFF006DE5)
 private val EditorSoft = Color(0xFFF7FAFF)
 private val EditorMuted = Color(0xFF577095)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutEditorScreen(
     onBack: () -> Unit,
@@ -67,12 +74,12 @@ fun WorkoutEditorScreen(
     val repository = remember { CustomWorkoutRepository(context.applicationContext) }
     val scope = rememberCoroutineScope()
 
-    val initialTemplate = remember { trainingTemplates.first() }
-    var name by remember { mutableStateOf(initialTemplate.name) }
-    var description by remember { mutableStateOf(initialTemplate.description) }
+    var name by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
     var routineMode by remember { mutableStateOf(RoutineMode.COACH_PLAN) }
     var error by remember { mutableStateOf<String?>(null) }
-    var selectedTemplateId by remember { mutableStateOf(initialTemplate.id) }
+    var selectedTemplateId by remember { mutableStateOf<String?>(null) }
+    var coachBlockCount by remember { mutableIntStateOf(3) }
     var continuousBlockCount by remember { mutableIntStateOf(2) }
     val continuousBlocks = remember {
         mutableStateListOf(
@@ -83,7 +90,9 @@ fun WorkoutEditorScreen(
     var intervalDraft by remember { mutableStateOf(IntervalRoutineDraft()) }
     val coachPlanSteps = remember {
         mutableStateListOf<GuidedStepDraft>().apply {
-            addAll(initialTemplate.steps)
+            repeat(coachBlockCount) { index ->
+                add(GuidedStepDraft(name = "Bloque ${index + 1}"))
+            }
         }
     }
 
@@ -92,8 +101,21 @@ fun WorkoutEditorScreen(
         name = template.name
         description = template.description
         routineMode = RoutineMode.COACH_PLAN
+        coachBlockCount = template.steps.size
         coachPlanSteps.clear()
         coachPlanSteps.addAll(template.steps)
+    }
+
+    fun syncCoachPlanSteps(count: Int) {
+        val safeCount = count.coerceIn(1, 30)
+        selectedTemplateId = null
+        coachBlockCount = safeCount
+        while (coachPlanSteps.size < safeCount) {
+            coachPlanSteps += GuidedStepDraft(name = "Bloque ${coachPlanSteps.size + 1}")
+        }
+        while (coachPlanSteps.size > safeCount) {
+            coachPlanSteps.removeAt(coachPlanSteps.lastIndex)
+        }
     }
 
     fun syncContinuousBlocks(count: Int) {
@@ -212,13 +234,17 @@ fun WorkoutEditorScreen(
                     RoutineMode.COACH_PLAN -> CoachPlanEditor(
                         selectedTemplateId = selectedTemplateId,
                         templates = trainingTemplates,
+                        blockCount = coachBlockCount,
                         steps = coachPlanSteps,
                         onApplyTemplate = ::applyTemplate,
+                        onBlockCountChange = ::syncCoachPlanSteps,
                         onStepChange = { index, step -> coachPlanSteps[index] = step },
-                        onAddStep = { coachPlanSteps += GuidedStepDraft(name = "Nuevo bloque") },
+                        onAddStep = { syncCoachPlanSteps(coachBlockCount + 1) },
                         onRemoveStep = { index ->
                             if (coachPlanSteps.size > 1) {
                                 coachPlanSteps.removeAt(index)
+                                coachBlockCount = coachPlanSteps.size
+                                selectedTemplateId = null
                             }
                         }
                     )
@@ -283,10 +309,12 @@ fun WorkoutEditorScreen(
 
 @Composable
 private fun CoachPlanEditor(
-    selectedTemplateId: String,
+    selectedTemplateId: String?,
     templates: List<TrainingTemplateDraft>,
+    blockCount: Int,
     steps: List<GuidedStepDraft>,
     onApplyTemplate: (TrainingTemplateDraft) -> Unit,
+    onBlockCountChange: (Int) -> Unit,
     onStepChange: (Int, GuidedStepDraft) -> Unit,
     onAddStep: () -> Unit,
     onRemoveStep: (Int) -> Unit
@@ -302,14 +330,17 @@ private fun CoachPlanEditor(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
         )
-        templates.forEach { template ->
-            ModeButton(
-                modifier = Modifier.fillMaxWidth(),
-                text = template.name,
-                selected = selectedTemplateId == template.id,
-                onClick = { onApplyTemplate(template) }
-            )
-        }
+        TemplateDropdown(
+            selectedTemplateId = selectedTemplateId,
+            templates = templates,
+            onApplyTemplate = onApplyTemplate
+        )
+        StepperRow(
+            label = "Cantidad de bloques a editar",
+            value = blockCount.toString(),
+            onDecrease = { onBlockCountChange(blockCount - 1) },
+            onIncrease = { onBlockCountChange(blockCount + 1) }
+        )
     }
 
     steps.forEachIndexed { index, step ->
@@ -328,6 +359,48 @@ private fun CoachPlanEditor(
         onClick = onAddStep
     ) {
         Text("Agregar bloque")
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TemplateDropdown(
+    selectedTemplateId: String?,
+    templates: List<TrainingTemplateDraft>,
+    onApplyTemplate: (TrainingTemplateDraft) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = templates.firstOrNull { it.id == selectedTemplateId }?.name ?: "Elegir plantilla"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            value = selectedName,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Plantilla") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            templates.forEach { template ->
+                DropdownMenuItem(
+                    text = { Text(template.name, fontSize = 14.sp) },
+                    onClick = {
+                        expanded = false
+                        onApplyTemplate(template)
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -373,23 +446,13 @@ private fun GuidedStepCard(
             singleLine = true,
             label = { Text("Nombre del bloque") }
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            ModeButton(
-                modifier = Modifier.weight(1f),
-                text = "Tiempo",
-                selected = step.targetType == TargetType.TIME_SECONDS,
-                onClick = { onChange(step.copy(targetType = TargetType.TIME_SECONDS, targetValue = step.targetValue.ifBlank { "5" })) }
-            )
-            ModeButton(
-                modifier = Modifier.weight(1f),
-                text = "Distancia",
-                selected = step.targetType == TargetType.DISTANCE_METERS,
-                onClick = { onChange(step.copy(targetType = TargetType.DISTANCE_METERS, targetValue = step.targetValue.ifBlank { "1" })) }
-            )
-        }
+        TargetTypeDropdown(
+            selected = step.targetType,
+            onChange = { targetType ->
+                val fallback = if (targetType == TargetType.TIME_SECONDS) "5" else "1"
+                onChange(step.copy(targetType = targetType, targetValue = step.targetValue.ifBlank { fallback }))
+            }
+        )
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = step.targetValue,
@@ -403,7 +466,7 @@ private fun GuidedStepCard(
                 keyboardType = if (step.targetType == TargetType.TIME_SECONDS) KeyboardType.Number else KeyboardType.Decimal
             )
         )
-        StepTypeSelector(
+        IntensityDropdown(
             selected = step.type,
             onChange = { onChange(step.copy(type = it)) }
         )
@@ -418,17 +481,97 @@ private fun GuidedStepCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StepTypeSelector(
+private fun TargetTypeDropdown(
+    selected: TargetType,
+    onChange: (TargetType) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedText = if (selected == TargetType.TIME_SECONDS) "Tiempo" else "Distancia"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            value = selectedText,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Tipo de bloque") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            listOf(TargetType.TIME_SECONDS, TargetType.DISTANCE_METERS).forEach { type ->
+                DropdownMenuItem(
+                    text = { Text(if (type == TargetType.TIME_SECONDS) "Tiempo" else "Distancia") },
+                    onClick = {
+                        expanded = false
+                        onChange(type)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IntensityDropdown(
     selected: StepType,
     onChange: (StepType) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Intensidad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ModeButton(modifier = Modifier.weight(1f), text = "Suave", selected = selected == StepType.EASY, onClick = { onChange(StepType.EASY) })
-            ModeButton(modifier = Modifier.weight(1f), text = "Fuerte", selected = selected == StepType.TEMPO || selected == StepType.INTERVAL, onClick = { onChange(StepType.TEMPO) })
-            ModeButton(modifier = Modifier.weight(1f), text = "Descanso", selected = selected == StepType.RECOVERY, onClick = { onChange(StepType.RECOVERY) })
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        "Suave" to StepType.EASY,
+        "Medio" to StepType.TEMPO,
+        "Fuerte" to StepType.INTERVAL,
+        "Descanso" to StepType.RECOVERY
+    )
+    val selectedText = when (selected) {
+        StepType.INTERVAL -> "Fuerte"
+        StepType.TEMPO -> "Medio"
+        StepType.RECOVERY -> "Descanso"
+        StepType.COOLDOWN -> "Suave"
+        StepType.WARMUP -> "Suave"
+        StepType.EASY -> "Suave"
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            value = selectedText,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Intensidad") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.first) },
+                    onClick = {
+                        expanded = false
+                        onChange(option.second)
+                    }
+                )
+            }
         }
     }
 }
@@ -685,10 +828,12 @@ private fun StepperRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedButton(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(46.dp),
                 onClick = onDecrease
             ) {
-                Text("-")
+                Text("-", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
             Surface(
                 modifier = Modifier.weight(2f),
@@ -703,10 +848,12 @@ private fun StepperRow(
                 )
             }
             OutlinedButton(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(46.dp),
                 onClick = onIncrease
             ) {
-                Text("+")
+                Text("+", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -727,20 +874,34 @@ private fun ModeButton(
 
     if (selected) {
         Button(
-            modifier = modifier,
+            modifier = modifier.height(48.dp),
             shape = RoundedCornerShape(14.dp),
             colors = colors,
             onClick = onClick
         ) {
-            Text(text)
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                lineHeight = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
         }
     } else {
         OutlinedButton(
-            modifier = modifier,
+            modifier = modifier.height(48.dp),
             shape = RoundedCornerShape(14.dp),
             onClick = onClick
         ) {
-            Text(text)
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                lineHeight = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
