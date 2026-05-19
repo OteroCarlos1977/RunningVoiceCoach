@@ -67,10 +67,12 @@ fun WorkoutEditorScreen(
     val repository = remember { CustomWorkoutRepository(context.applicationContext) }
     val scope = rememberCoroutineScope()
 
-    var name by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var routineMode by remember { mutableStateOf(RoutineMode.CONTINUOUS) }
+    val initialTemplate = remember { trainingTemplates.first() }
+    var name by remember { mutableStateOf(initialTemplate.name) }
+    var description by remember { mutableStateOf(initialTemplate.description) }
+    var routineMode by remember { mutableStateOf(RoutineMode.COACH_PLAN) }
     var error by remember { mutableStateOf<String?>(null) }
+    var selectedTemplateId by remember { mutableStateOf(initialTemplate.id) }
     var continuousBlockCount by remember { mutableIntStateOf(2) }
     val continuousBlocks = remember {
         mutableStateListOf(
@@ -79,6 +81,20 @@ fun WorkoutEditorScreen(
         )
     }
     var intervalDraft by remember { mutableStateOf(IntervalRoutineDraft()) }
+    val coachPlanSteps = remember {
+        mutableStateListOf<GuidedStepDraft>().apply {
+            addAll(initialTemplate.steps)
+        }
+    }
+
+    fun applyTemplate(template: TrainingTemplateDraft) {
+        selectedTemplateId = template.id
+        name = template.name
+        description = template.description
+        routineMode = RoutineMode.COACH_PLAN
+        coachPlanSteps.clear()
+        coachPlanSteps.addAll(template.steps)
+    }
 
     fun syncContinuousBlocks(count: Int) {
         val safeCount = count.coerceIn(1, 6)
@@ -174,19 +190,39 @@ fun WorkoutEditorScreen(
                 ) {
                     ModeButton(
                         modifier = Modifier.weight(1f),
-                        text = "Bloques continuos",
+                        text = "Plan entrenador",
+                        selected = routineMode == RoutineMode.COACH_PLAN,
+                        onClick = { routineMode = RoutineMode.COACH_PLAN }
+                    )
+                    ModeButton(
+                        modifier = Modifier.weight(1f),
+                        text = "Continuos",
                         selected = routineMode == RoutineMode.CONTINUOUS,
                         onClick = { routineMode = RoutineMode.CONTINUOUS }
                     )
                     ModeButton(
                         modifier = Modifier.weight(1f),
-                        text = "Pasadas con descanso",
+                        text = "Pasadas",
                         selected = routineMode == RoutineMode.INTERVALS,
                         onClick = { routineMode = RoutineMode.INTERVALS }
                     )
                 }
 
                 when (routineMode) {
+                    RoutineMode.COACH_PLAN -> CoachPlanEditor(
+                        selectedTemplateId = selectedTemplateId,
+                        templates = trainingTemplates,
+                        steps = coachPlanSteps,
+                        onApplyTemplate = ::applyTemplate,
+                        onStepChange = { index, step -> coachPlanSteps[index] = step },
+                        onAddStep = { coachPlanSteps += GuidedStepDraft(name = "Nuevo bloque") },
+                        onRemoveStep = { index ->
+                            if (coachPlanSteps.size > 1) {
+                                coachPlanSteps.removeAt(index)
+                            }
+                        }
+                    )
+
                     RoutineMode.CONTINUOUS -> ContinuousRoutineEditor(
                         blockCount = continuousBlockCount,
                         blocks = continuousBlocks,
@@ -202,6 +238,7 @@ fun WorkoutEditorScreen(
 
                 RoutinePreview(
                     mode = routineMode,
+                    coachPlanSteps = coachPlanSteps,
                     continuousBlocks = continuousBlocks,
                     intervalDraft = intervalDraft
                 )
@@ -224,6 +261,7 @@ fun WorkoutEditorScreen(
                             name = name,
                             description = description,
                             mode = routineMode,
+                            coachPlanSteps = coachPlanSteps,
                             continuousBlocks = continuousBlocks,
                             intervalDraft = intervalDraft,
                             onError = { error = it }
@@ -239,6 +277,158 @@ fun WorkoutEditorScreen(
                     Text("Guardar rutina", fontWeight = FontWeight.Bold)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CoachPlanEditor(
+    selectedTemplateId: String,
+    templates: List<TrainingTemplateDraft>,
+    steps: List<GuidedStepDraft>,
+    onApplyTemplate: (TrainingTemplateDraft) -> Unit,
+    onStepChange: (Int, GuidedStepDraft) -> Unit,
+    onAddStep: () -> Unit,
+    onRemoveStep: (Int) -> Unit
+) {
+    SectionCard {
+        Text(
+            text = "Plantillas de entrenamiento",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Carga una base del entrenador y ajusta cada bloque antes de guardar.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+        )
+        templates.forEach { template ->
+            ModeButton(
+                modifier = Modifier.fillMaxWidth(),
+                text = template.name,
+                selected = selectedTemplateId == template.id,
+                onClick = { onApplyTemplate(template) }
+            )
+        }
+    }
+
+    steps.forEachIndexed { index, step ->
+        GuidedStepCard(
+            index = index,
+            step = step,
+            canRemove = steps.size > 1,
+            onChange = { onStepChange(index, it) },
+            onRemove = { onRemoveStep(index) }
+        )
+    }
+
+    OutlinedButton(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        onClick = onAddStep
+    ) {
+        Text("Agregar bloque")
+    }
+}
+
+@Composable
+private fun GuidedStepCard(
+    index: Int,
+    step: GuidedStepDraft,
+    canRemove: Boolean,
+    onChange: (GuidedStepDraft) -> Unit,
+    onRemove: () -> Unit
+) {
+    SectionCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Bloque ${index + 1}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            if (canRemove) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color(0xFFFFECE6),
+                    onClick = onRemove
+                ) {
+                    Text(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        text = "Quitar",
+                        color = Color(0xFFB93815),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = step.name,
+            onValueChange = { onChange(step.copy(name = it)) },
+            singleLine = true,
+            label = { Text("Nombre del bloque") }
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ModeButton(
+                modifier = Modifier.weight(1f),
+                text = "Tiempo",
+                selected = step.targetType == TargetType.TIME_SECONDS,
+                onClick = { onChange(step.copy(targetType = TargetType.TIME_SECONDS, targetValue = step.targetValue.ifBlank { "5" })) }
+            )
+            ModeButton(
+                modifier = Modifier.weight(1f),
+                text = "Distancia",
+                selected = step.targetType == TargetType.DISTANCE_METERS,
+                onClick = { onChange(step.copy(targetType = TargetType.DISTANCE_METERS, targetValue = step.targetValue.ifBlank { "1" })) }
+            )
+        }
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = step.targetValue,
+            onValueChange = {
+                val value = if (step.targetType == TargetType.TIME_SECONDS) it.onlyDigits() else it.onlyDecimal()
+                onChange(step.copy(targetValue = value))
+            },
+            singleLine = true,
+            label = { Text(if (step.targetType == TargetType.TIME_SECONDS) "Duracion en minutos" else "Distancia en km") },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = if (step.targetType == TargetType.TIME_SECONDS) KeyboardType.Number else KeyboardType.Decimal
+            )
+        )
+        StepTypeSelector(
+            selected = step.type,
+            onChange = { onChange(step.copy(type = it)) }
+        )
+        PaceFields(
+            paceMinutes = step.paceMinutes,
+            paceSeconds = step.paceSeconds,
+            toleranceSeconds = step.toleranceSeconds,
+            onPaceMinutesChange = { onChange(step.copy(paceMinutes = it.onlyDigits())) },
+            onPaceSecondsChange = { onChange(step.copy(paceSeconds = it.onlyDigits().take(2))) },
+            onToleranceChange = { onChange(step.copy(toleranceSeconds = it.onlyDigits())) }
+        )
+    }
+}
+
+@Composable
+private fun StepTypeSelector(
+    selected: StepType,
+    onChange: (StepType) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Intensidad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ModeButton(modifier = Modifier.weight(1f), text = "Suave", selected = selected == StepType.EASY, onClick = { onChange(StepType.EASY) })
+            ModeButton(modifier = Modifier.weight(1f), text = "Fuerte", selected = selected == StepType.TEMPO || selected == StepType.INTERVAL, onClick = { onChange(StepType.TEMPO) })
+            ModeButton(modifier = Modifier.weight(1f), text = "Descanso", selected = selected == StepType.RECOVERY, onClick = { onChange(StepType.RECOVERY) })
         }
     }
 }
@@ -441,6 +631,7 @@ private fun PaceFields(
 @Composable
 private fun RoutinePreview(
     mode: RoutineMode,
+    coachPlanSteps: List<GuidedStepDraft>,
     continuousBlocks: List<ContinuousBlockDraft>,
     intervalDraft: IntervalRoutineDraft
 ) {
@@ -451,6 +642,11 @@ private fun RoutinePreview(
             fontWeight = FontWeight.Bold
         )
         val lines: List<String> = when (mode) {
+            RoutineMode.COACH_PLAN -> coachPlanSteps.mapIndexed { index, step ->
+                val unit = if (step.targetType == TargetType.TIME_SECONDS) "min" else "km"
+                "${index + 1}. ${step.name.ifBlank { "Bloque ${index + 1}" }} - ${step.targetValue.ifBlank { "0" }} $unit a ${step.paceMinutes}:${step.paceSeconds.padStart(2, '0')}"
+            }
+
             RoutineMode.CONTINUOUS -> continuousBlocks.mapIndexed { index, block ->
                 "${index + 1}. ${block.name.ifBlank { "Bloque ${index + 1}" }} - ${block.distanceKm.ifBlank { "0" }} km a ${block.paceMinutes}:${block.paceSeconds.padStart(2, '0')} /km"
             }
@@ -566,9 +762,27 @@ private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 private enum class RoutineMode {
+    COACH_PLAN,
     CONTINUOUS,
     INTERVALS
 }
+
+private data class TrainingTemplateDraft(
+    val id: String,
+    val name: String,
+    val description: String,
+    val steps: List<GuidedStepDraft>
+)
+
+private data class GuidedStepDraft(
+    val name: String = "Bloque",
+    val targetType: TargetType = TargetType.TIME_SECONDS,
+    val targetValue: String = "5",
+    val paceMinutes: String = "7",
+    val paceSeconds: String = "00",
+    val toleranceSeconds: String = "42",
+    val type: StepType = StepType.EASY
+)
 
 private data class ContinuousBlockDraft(
     val name: String = "Bloque",
@@ -595,6 +809,7 @@ private fun buildWorkoutOrNull(
     name: String,
     description: String,
     mode: RoutineMode,
+    coachPlanSteps: List<GuidedStepDraft>,
     continuousBlocks: List<ContinuousBlockDraft>,
     intervalDraft: IntervalRoutineDraft,
     onError: (String) -> Unit
@@ -606,6 +821,7 @@ private fun buildWorkoutOrNull(
     }
 
     val steps = when (mode) {
+        RoutineMode.COACH_PLAN -> buildCoachPlanSteps(coachPlanSteps)
         RoutineMode.CONTINUOUS -> buildContinuousSteps(continuousBlocks)
         RoutineMode.INTERVALS -> buildIntervalSteps(intervalDraft)
     }
@@ -621,6 +837,34 @@ private fun buildWorkoutOrNull(
         description = description.trim().takeIf { it.isNotBlank() },
         steps = steps
     )
+}
+
+private fun buildCoachPlanSteps(steps: List<GuidedStepDraft>): List<WorkoutStep>? {
+    return steps.mapIndexed { index, step ->
+        val pace = parsePace(step.paceMinutes, step.paceSeconds) ?: return null
+        val tolerance = step.toleranceSeconds.toIntOrNull()?.coerceAtLeast(0) ?: return null
+        val targetValue = when (step.targetType) {
+            TargetType.TIME_SECONDS -> step.targetValue.toDoubleOrNull()
+                ?.takeIf { it > 0.0 }
+                ?.times(60.0)
+                ?: return null
+
+            TargetType.DISTANCE_METERS -> step.targetValue.toDoubleOrNull()
+                ?.takeIf { it > 0.0 }
+                ?.times(1000.0)
+                ?: return null
+        }
+
+        WorkoutStep(
+            id = "coach-${index + 1}-${UUID.randomUUID()}",
+            name = step.name.trim().ifBlank { "Bloque ${index + 1}" },
+            type = step.type,
+            targetType = step.targetType,
+            targetValue = targetValue,
+            targetPaceSecondsPerKm = pace,
+            paceToleranceSeconds = tolerance
+        )
+    }
 }
 
 private fun buildContinuousSteps(blocks: List<ContinuousBlockDraft>): List<WorkoutStep>? {
@@ -691,6 +935,197 @@ private fun parsePace(minutes: String, seconds: String): Int? {
         return null
     }
     return min * 60 + sec
+}
+
+private val trainingTemplates = listOf(
+    TrainingTemplateDraft(
+        id = "progresivo-10k",
+        name = "Progresivo base tipo 10K",
+        description = "Mejorar ritmo con bloques progresivos y cierre tecnico.",
+        steps = buildList {
+            add(timeDraft("10 min ritmo 1", 10, 7, 30, StepType.EASY))
+            repeat(4) { index ->
+                add(timeDraft("Bloque ${index + 1}: progresivo ritmo 1 a 3", 3, 6, 30, StepType.TEMPO))
+                add(timeDraft("Regenerativo ${index + 1}", 1, 8, 0, StepType.RECOVERY))
+            }
+            add(timeDraft("10 min ritmo 1", 10, 7, 30, StepType.EASY))
+            repeat(5) { index ->
+                add(distanceDraft("100 m ritmo carrera ${index + 1}", 0.1, 5, 30, StepType.INTERVAL))
+                add(distanceDraft("100 m regenerativo ${index + 1}", 0.1, 8, 0, StepType.RECOVERY))
+            }
+            repeat(5) { index -> add(distanceDraft("Progresivo 50 m ${index + 1}", 0.05, 5, 45, StepType.TEMPO)) }
+        }
+    ),
+    TrainingTemplateDraft(
+        id = "fondo-progresivo-10k",
+        name = "Fondo progresivo para 10K",
+        description = "Ganar resistencia y terminar mas fuerte.",
+        steps = listOf(
+            timeDraft("15 min ritmo 1", 15, 7, 30, StepType.EASY),
+            timeDraft("20 min ritmo 1 estable", 20, 7, 20, StepType.EASY),
+            timeDraft("10 min ritmo 2", 10, 6, 30, StepType.TEMPO),
+            timeDraft("5 min ritmo 3 controlado", 5, 5, 45, StepType.TEMPO),
+            timeDraft("5 min regenerativo", 5, 8, 0, StepType.RECOVERY),
+            distanceDraft("4 progresivos de 80 m", 0.32, 5, 45, StepType.TEMPO)
+        )
+    ),
+    TrainingTemplateDraft(
+        id = "fondo-base-21k",
+        name = "Fondo largo base para 21K",
+        description = "Construir resistencia aerobica.",
+        steps = listOf(
+            timeDraft("15 min ritmo 1", 15, 7, 30, StepType.EASY),
+            timeDraft("40 min ritmo 1 comodo", 40, 7, 30, StepType.EASY),
+            timeDraft("10 min ritmo 2", 10, 6, 30, StepType.TEMPO),
+            timeDraft("5 min ritmo 1", 5, 7, 30, StepType.EASY),
+            distanceDraft("4 progresivos de 100 m", 0.4, 5, 45, StepType.TEMPO)
+        )
+    ),
+    TrainingTemplateDraft(
+        id = "fondo-42k",
+        name = "Fondo largo para 42K",
+        description = "Volumen para maraton sin buscar velocidad excesiva.",
+        steps = listOf(
+            timeDraft("15 min ritmo 1", 15, 7, 30, StepType.EASY),
+            timeDraft("75 min ritmo 1", 75, 7, 30, StepType.EASY),
+            timeDraft("15 min ritmo 2 suave", 15, 6, 45, StepType.TEMPO),
+            timeDraft("10 min ritmo 1", 10, 7, 30, StepType.EASY),
+            timeDraft("5 min caminata final", 5, 10, 0, StepType.COOLDOWN)
+        )
+    ),
+    TrainingTemplateDraft(
+        id = "intervalos-10k",
+        name = "Intervalos cortos velocidad 10K",
+        description = "Mejorar economia de carrera.",
+        steps = buildList {
+            add(timeDraft("12 min ritmo 1", 12, 7, 30, StepType.EASY))
+            repeat(6) { index ->
+                add(timeDraft("Bloque fuerte ${index + 1}", 2, 5, 45, StepType.INTERVAL))
+                add(timeDraft("Regenerativo ${index + 1}", 1, 8, 0, StepType.RECOVERY))
+            }
+            add(timeDraft("8 min ritmo 1", 8, 7, 30, StepType.EASY))
+            repeat(6) { index ->
+                add(distanceDraft("100 m rapido ${index + 1}", 0.1, 5, 15, StepType.INTERVAL))
+                add(distanceDraft("100 m suave ${index + 1}", 0.1, 8, 0, StepType.RECOVERY))
+            }
+        }
+    ),
+    TrainingTemplateDraft(
+        id = "bloques-progresivos-largos",
+        name = "Bloques progresivos largos",
+        description = "Progresivos sostenidos para 10K y 21K.",
+        steps = buildList {
+            add(timeDraft("10 min ritmo 1", 10, 7, 30, StepType.EASY))
+            repeat(3) { index ->
+                add(timeDraft("Progresivo largo ${index + 1}", 6, 6, 30, StepType.TEMPO))
+                add(timeDraft("Regenerativo ${index + 1}", 2, 8, 0, StepType.RECOVERY))
+            }
+            add(timeDraft("10 min ritmo 1", 10, 7, 30, StepType.EASY))
+            repeat(5) { index -> add(distanceDraft("Progresivo 60 m ${index + 1}", 0.06, 5, 45, StepType.TEMPO)) }
+        }
+    ),
+    TrainingTemplateDraft(
+        id = "tempo-10k",
+        name = "Tempo controlado para 10K",
+        description = "Correr alegre sin ir al maximo.",
+        steps = buildList {
+            add(timeDraft("12 min ritmo 1", 12, 7, 30, StepType.EASY))
+            add(timeDraft("20 min ritmo 2/3 controlado", 20, 6, 10, StepType.TEMPO))
+            add(timeDraft("8 min ritmo 1", 8, 7, 30, StepType.EASY))
+            repeat(4) { index ->
+                add(distanceDraft("100 m ritmo carrera ${index + 1}", 0.1, 5, 30, StepType.INTERVAL))
+                add(distanceDraft("100 m regenerativo ${index + 1}", 0.1, 8, 0, StepType.RECOVERY))
+            }
+        }
+    ),
+    TrainingTemplateDraft(
+        id = "tempo-partido-21k",
+        name = "Tempo partido para 21K",
+        description = "Tempo tolerable para media maraton.",
+        steps = buildList {
+            add(timeDraft("15 min ritmo 1", 15, 7, 30, StepType.EASY))
+            repeat(3) { index ->
+                add(timeDraft("Tempo 21K ${index + 1}", 10, 6, 15, StepType.TEMPO))
+                add(timeDraft("Ritmo 1 ${index + 1}", 3, 7, 30, StepType.RECOVERY))
+            }
+            add(timeDraft("10 min regenerativo", 10, 8, 0, StepType.RECOVERY))
+            distanceDraft("4 progresivos de 80 m", 0.32, 5, 45, StepType.TEMPO).also { add(it) }
+        }
+    ),
+    TrainingTemplateDraft(
+        id = "fondo-final-fuerte",
+        name = "Fondo con final fuerte",
+        description = "Resistencia y capacidad de remate.",
+        steps = listOf(
+            timeDraft("20 min ritmo 1", 20, 7, 30, StepType.EASY),
+            timeDraft("25 min ritmo 1 estable", 25, 7, 20, StepType.EASY),
+            timeDraft("15 min ritmo 2", 15, 6, 30, StepType.TEMPO),
+            timeDraft("5 min ritmo 3 controlado", 5, 5, 45, StepType.TEMPO),
+            timeDraft("10 min ritmo 1", 10, 7, 30, StepType.EASY)
+        )
+    ),
+    TrainingTemplateDraft(
+        id = "fartlek-piramidal",
+        name = "Fartlek piramidal",
+        description = "Entrenamiento variado para 10K, 21K y mejora general.",
+        steps = buildList {
+            add(timeDraft("12 min ritmo 1", 12, 7, 30, StepType.EASY))
+            listOf(1 to 1, 2 to 1, 3 to 2, 4 to 2, 3 to 2, 2 to 1, 1 to 1).forEachIndexed { index, block ->
+                add(timeDraft("Fuerte ${index + 1}", block.first, 5, 45, StepType.INTERVAL))
+                add(timeDraft("Suave ${index + 1}", block.second, 8, 0, StepType.RECOVERY))
+            }
+            add(timeDraft("10 min ritmo 1", 10, 7, 30, StepType.EASY))
+            repeat(4) { index -> add(distanceDraft("Progresivo 50 m ${index + 1}", 0.05, 5, 45, StepType.TEMPO)) }
+        }
+    ),
+    TrainingTemplateDraft(
+        id = "fondo-regenerativo",
+        name = "Fondo regenerativo",
+        description = "Sumar kilometros sin cargar demasiado.",
+        steps = listOf(
+            timeDraft("40 min ritmo 1 muy comodo", 40, 7, 45, StepType.EASY),
+            timeDraft("5 min caminata rapida", 5, 10, 0, StepType.RECOVERY),
+            distanceDraft("5 progresivos de 50 m suaves", 0.25, 6, 0, StepType.TEMPO)
+        )
+    ),
+    TrainingTemplateDraft(
+        id = "maraton-especifico",
+        name = "Fondo especifico para maraton",
+        description = "Preparacion exigente por duracion para 42K.",
+        steps = buildList {
+            add(timeDraft("20 min ritmo 1", 20, 7, 30, StepType.EASY))
+            add(timeDraft("40 min ritmo 1 estable", 40, 7, 20, StepType.EASY))
+            repeat(3) { index ->
+                add(timeDraft("Ritmo maraton ${index + 1}", 15, 6, 45, StepType.TEMPO))
+                add(timeDraft("Ritmo 1 ${index + 1}", 5, 7, 30, StepType.RECOVERY))
+            }
+            add(timeDraft("10 min ritmo 1 final", 10, 7, 30, StepType.COOLDOWN))
+        }
+    )
+)
+
+private fun timeDraft(name: String, minutes: Int, paceMinutes: Int, paceSeconds: Int, type: StepType): GuidedStepDraft {
+    return GuidedStepDraft(
+        name = name,
+        targetType = TargetType.TIME_SECONDS,
+        targetValue = minutes.toString(),
+        paceMinutes = paceMinutes.toString(),
+        paceSeconds = paceSeconds.toString().padStart(2, '0'),
+        toleranceSeconds = if (type == StepType.RECOVERY || type == StepType.COOLDOWN) "60" else "35",
+        type = type
+    )
+}
+
+private fun distanceDraft(name: String, kilometers: Double, paceMinutes: Int, paceSeconds: Int, type: StepType): GuidedStepDraft {
+    return GuidedStepDraft(
+        name = name,
+        targetType = TargetType.DISTANCE_METERS,
+        targetValue = kilometers.toString(),
+        paceMinutes = paceMinutes.toString(),
+        paceSeconds = paceSeconds.toString().padStart(2, '0'),
+        toleranceSeconds = if (type == StepType.RECOVERY || type == StepType.COOLDOWN) "60" else "30",
+        type = type
+    )
 }
 
 private fun String.onlyDigits(): String {
