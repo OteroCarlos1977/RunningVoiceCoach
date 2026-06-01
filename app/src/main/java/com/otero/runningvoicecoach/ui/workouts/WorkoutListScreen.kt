@@ -64,6 +64,7 @@ fun WorkoutListScreen(
     onBack: () -> Unit,
     onCreateWorkout: () -> Unit,
     onSelectWorkout: (String) -> Unit,
+    onStartFreeRun: () -> Unit = { onSelectWorkout(ExampleWorkouts.freeRun.id) },
     routines: List<RoutinePreset> = ExampleWorkouts.presets,
     onHome: () -> Unit = onBack,
     onProgress: () -> Unit = {},
@@ -90,6 +91,7 @@ fun WorkoutListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 WorkoutsHeader(onCreateWorkout = onCreateWorkout)
+                FreeRunRow(onStartFreeRun = onStartFreeRun)
 
                 if (customWorkouts.isNotEmpty()) {
                     Text(
@@ -126,6 +128,18 @@ fun WorkoutListScreen(
             )
         }
     }
+}
+
+@Composable
+private fun FreeRunRow(onStartFreeRun: () -> Unit) {
+    RoutineRowShell(
+        title = "Carrera libre",
+        duration = "Sin limite",
+        level = "Libre",
+        accent = Color(0xFF12B76A),
+        leading = "▶",
+        onClick = onStartFreeRun
+    )
 }
 
 @Composable

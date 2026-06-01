@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import com.otero.runningvoicecoach.domain.workout.ExampleWorkouts
 import com.otero.runningvoicecoach.ui.activeRun.ActiveRunScreen
 import com.otero.runningvoicecoach.ui.health.HealthScreen
 import com.otero.runningvoicecoach.ui.home.HomeScreen
@@ -95,6 +96,9 @@ fun RunningVoiceCoachNavHost() {
                 onCreateWorkout = { navController.navigate(Screen.WorkoutEditor.route) },
                 onSelectWorkout = { workoutPlanId ->
                     navController.navigate(Screen.ActiveRun.createRoute(workoutPlanId))
+                },
+                onStartFreeRun = {
+                    navController.navigate(Screen.ActiveRun.createRoute(ExampleWorkouts.freeRun.id))
                 },
                 onHome = goHome,
                 onProgress = goProgress,

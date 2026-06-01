@@ -72,7 +72,11 @@ class RunTelemetryRecorder(
         totalDistanceMeters: Double,
         speedKmh: Double?
     ) {
-        while (totalDistanceMeters >= nextKilometer * METERS_PER_KILOMETER) {
+        var splitsCreated = 0
+        while (
+            totalDistanceMeters >= nextKilometer * METERS_PER_KILOMETER &&
+            splitsCreated < MAX_SPLITS_PER_SAMPLE
+        ) {
             val splitDistanceMeters = (nextKilometer * METERS_PER_KILOMETER) - lastSplitDistanceMeters
             val splitDurationSeconds = (elapsedSeconds - lastSplitElapsedSeconds).coerceAtLeast(0L)
             kilometerSplits += RunKilometerSplit(
@@ -88,6 +92,7 @@ class RunTelemetryRecorder(
             lastSplitElapsedSeconds = elapsedSeconds
             lastSplitDistanceMeters = nextKilometer * METERS_PER_KILOMETER
             nextKilometer += 1
+            splitsCreated += 1
         }
     }
 
@@ -150,6 +155,7 @@ class RunTelemetryRecorder(
         const val SECONDS_PER_HOUR = 3600.0
         const val DEFAULT_ROUTE_MIN_INTERVAL_SECONDS = 5L
         const val DEFAULT_ROUTE_MIN_DISTANCE_METERS = 10.0
+        const val MAX_SPLITS_PER_SAMPLE = 3
     }
 }
 

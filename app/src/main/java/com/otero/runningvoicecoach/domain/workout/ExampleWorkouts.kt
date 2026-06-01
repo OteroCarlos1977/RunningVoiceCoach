@@ -16,6 +16,24 @@ data class RoutinePreset(
 )
 
 object ExampleWorkouts {
+    private const val FREE_RUN_MAX_SECONDS = 86_400.0
+
+    val freeRun = WorkoutPlan(
+        id = "carrera-libre",
+        name = "Carrera libre",
+        description = "Actividad sin objetivo cerrado. Registra distancia, tiempo, ritmo, mapa y parciales hasta que el corredor presione stop.",
+        steps = listOf(
+            timeStep(
+                id = "free-run-open",
+                name = "Actividad libre",
+                type = StepType.EASY,
+                seconds = FREE_RUN_MAX_SECONDS,
+                paceSecondsPerKm = null,
+                toleranceSeconds = 0
+            )
+        )
+    )
+
     val simulacionRitmo7Min = WorkoutPlan(
         id = "simulacion-ritmo-7min",
         name = "Simulacion ritmo 7:00",
@@ -328,10 +346,10 @@ object ExampleWorkouts {
         )
     )
 
-    val all: List<WorkoutPlan> = presets.map { it.workoutPlan } + simulacionRitmo7Min + intervalos5x1000
+    val all: List<WorkoutPlan> = presets.map { it.workoutPlan } + freeRun + simulacionRitmo7Min + intervalos5x1000
 
     fun findById(id: String?): WorkoutPlan {
-        return all.firstOrNull { it.id == id } ?: simulacionRitmo7Min
+        return all.firstOrNull { it.id == id } ?: freeRun
     }
 
     private fun repeatWalkRun(
