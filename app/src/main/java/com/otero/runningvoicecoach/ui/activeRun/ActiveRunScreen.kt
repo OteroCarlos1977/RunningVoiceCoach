@@ -28,12 +28,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -122,10 +124,11 @@ fun ActiveRunScreen(
     val locationState by locationTracker.state.collectAsState()
     val latestLocationState by rememberUpdatedState(locationState)
 
-    var useGpsMode by rememberSaveable { mutableStateOf(false) }
+    val useGpsMode = true
     var isRunning by rememberSaveable { mutableStateOf(false) }
     var isPaused by rememberSaveable { mutableStateOf(false) }
     var isFinished by rememberSaveable { mutableStateOf(false) }
+    var showFinishConfirmation by rememberSaveable { mutableStateOf(false) }
     var currentStepIndex by rememberSaveable { mutableIntStateOf(0) }
     var totalDurationSeconds by rememberSaveable { mutableLongStateOf(0L) }
     var stepDurationSeconds by rememberSaveable { mutableLongStateOf(0L) }
@@ -135,7 +138,7 @@ fun ActiveRunScreen(
     var sessionStartedAtMillis by rememberSaveable { mutableLongStateOf(0L) }
     var activePauseStartedAtMillis by rememberSaveable { mutableLongStateOf(0L) }
     var activePauseStartedAtElapsedSeconds by rememberSaveable { mutableLongStateOf(0L) }
-    var currentPaceSecondsPerKm by rememberSaveable { mutableStateOf<Int?>(330) }
+    var currentPaceSecondsPerKm by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedBackgroundIndex by rememberSaveable { mutableIntStateOf(0) }
     val completedStepSummaries = remember { mutableStateListOf<RunStepSummary>() }
     val pauseSegments = remember { mutableStateListOf<RunPauseSegment>() }
@@ -320,6 +323,86 @@ fun ActiveRunScreen(
         }
     }
 
+    fun finishCurrentRun() {
+        voiceCoach.stop()
+        locationTracker.stop()
+        RunForegroundService.stop(context)
+        isRunning = false
+        isFinished = true
+        showFinishConfirmation = false
+        coroutineScope.launch {
+            if (activePauseStartedAtMillis > 0L) {
+                pauseSegments += RunPauseSegment(
+                    startedAtMillis = activePauseStartedAtMillis,
+                    endedAtMillis = System.currentTimeMillis(),
+                    startedAtElapsedSeconds = activePauseStartedAtElapsedSeconds,
+                    endedAtElapsedSeconds = totalDurationSeconds
+                )
+                activePauseStartedAtMillis = 0L
+                activePauseStartedAtElapsedSeconds = 0L
+            }
+            appendStepSummaryIfNeeded(
+                summaries = completedStepSummaries,
+                state = engineState,
+                stepDistanceMeters = stepDistanceMeters,
+                stepDurationSeconds = stepDurationSeconds
+            )
+            val sessionId = UUID.randomUUID().toString()
+            val finishedAtMillis = System.currentTimeMillis()
+            historyRepository.saveSession(
+                RunSessionSummary(
+                    id = sessionId,
+                    workoutName = workoutPlan.name,
+                    finishedAtMillis = finishedAtMillis,
+                    totalDistanceMeters = totalDistanceMeters,
+                    totalDurationSeconds = totalDurationSeconds,
+                    averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
+                        distanceMeters = totalDistanceMeters,
+                        durationSeconds = totalDurationSeconds
+                    ),
+                    stepSummaries = completedStepSummaries.toList()
+                )
+            )
+            activityRepository.saveSession(
+                buildRunSession(
+                    id = sessionId,
+                    workoutPlanId = workoutPlan.id,
+                    workoutName = workoutPlan.name,
+                    startedAtMillis = sessionStartedAtMillis,
+                    finishedAtMillis = finishedAtMillis,
+                    totalDistanceMeters = totalDistanceMeters,
+                    totalDurationSeconds = totalDurationSeconds,
+                    stepSummaries = completedStepSummaries,
+                    pauseSegments = pauseSegments,
+                    telemetryRecorder = telemetryRecorder
+                )
+            )
+            onFinish()
+        }
+    }
+
+    if (showFinishConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showFinishConfirmation = false },
+            title = { Text("Finalizar actividad") },
+            text = {
+                Text(
+                    text = "Se guardara la actividad actual con ${formatDuration(totalDurationSeconds)} y ${formatDistance(totalDistanceMeters)}."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = ::finishCurrentRun) {
+                    Text("Finalizar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFinishConfirmation = false }) {
+                    Text("Seguir corriendo")
+                }
+            }
+        )
+    }
+
     AppScaffold(title = "Carrera activa", showTopBar = false) { padding ->
         Box(
             modifier = Modifier
@@ -365,23 +448,15 @@ fun ActiveRunScreen(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(50),
-                            color = Color.White.copy(alpha = 0.86f),
-                            onClick = {
-                                if (!isRunning) {
-                                    useGpsMode = !useGpsMode
-                                    locationTracker.stop()
-                                    locationTracker.reset()
-                                    lastGpsTotalDistanceMeters = 0.0
-                                }
-                            }
+                            color = Color.White.copy(alpha = 0.86f)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("●", color = if (useGpsMode) Color(0xFF12B76A) else Color(0xFFFF6A00), fontSize = 15.sp)
-                                Text(if (useGpsMode) "GPS" else "SIM", color = Color(0xFF06245A), fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                                Text("●", color = Color(0xFF12B76A), fontSize = 15.sp)
+                                Text("GPS", color = Color(0xFF06245A), fontSize = 17.sp, fontWeight = FontWeight.Medium)
                                 Text("▁▃▆", color = Color(0xFF12B76A), fontSize = 16.sp)
                                 Text("❤ 128", color = Color(0xFF06245A), fontSize = 15.sp)
                             }
@@ -542,7 +617,7 @@ fun ActiveRunScreen(
                                     sessionStartedAtMillis = 0L
                                     activePauseStartedAtMillis = 0L
                                     activePauseStartedAtElapsedSeconds = 0L
-                                    currentPaceSecondsPerKm = DEFAULT_SIMULATED_PACE_SECONDS_PER_KM
+                                    currentPaceSecondsPerKm = null
                                     completedStepSummaries.clear()
                                     pauseSegments.clear()
                                     telemetryRecorder.reset()
@@ -611,59 +686,8 @@ fun ActiveRunScreen(
                             content = Color(0xFFFF4B0B),
                             size = 76,
                             onClick = {
-                                voiceCoach.stop()
-                                locationTracker.stop()
-                                RunForegroundService.stop(context)
-                                isRunning = false
-                                isFinished = true
-                                coroutineScope.launch {
-                                    if (activePauseStartedAtMillis > 0L) {
-                                        pauseSegments += RunPauseSegment(
-                                            startedAtMillis = activePauseStartedAtMillis,
-                                            endedAtMillis = System.currentTimeMillis(),
-                                            startedAtElapsedSeconds = activePauseStartedAtElapsedSeconds,
-                                            endedAtElapsedSeconds = totalDurationSeconds
-                                        )
-                                        activePauseStartedAtMillis = 0L
-                                        activePauseStartedAtElapsedSeconds = 0L
-                                    }
-                                    appendStepSummaryIfNeeded(
-                                        summaries = completedStepSummaries,
-                                        state = engineState,
-                                        stepDistanceMeters = stepDistanceMeters,
-                                        stepDurationSeconds = stepDurationSeconds
-                                    )
-                                    val sessionId = UUID.randomUUID().toString()
-                                    val finishedAtMillis = System.currentTimeMillis()
-                                    historyRepository.saveSession(
-                                        RunSessionSummary(
-                                            id = sessionId,
-                                            workoutName = workoutPlan.name,
-                                            finishedAtMillis = finishedAtMillis,
-                                            totalDistanceMeters = totalDistanceMeters,
-                                            totalDurationSeconds = totalDurationSeconds,
-                                            averagePaceSecondsPerKm = PaceCalculator.calculateAveragePaceSecondsPerKm(
-                                                distanceMeters = totalDistanceMeters,
-                                                durationSeconds = totalDurationSeconds
-                                            ),
-                                            stepSummaries = completedStepSummaries.toList()
-                                        )
-                                    )
-                                    activityRepository.saveSession(
-                                        buildRunSession(
-                                            id = sessionId,
-                                            workoutPlanId = workoutPlan.id,
-                                            workoutName = workoutPlan.name,
-                                            startedAtMillis = sessionStartedAtMillis,
-                                            finishedAtMillis = finishedAtMillis,
-                                            totalDistanceMeters = totalDistanceMeters,
-                                            totalDurationSeconds = totalDurationSeconds,
-                                            stepSummaries = completedStepSummaries,
-                                            pauseSegments = pauseSegments,
-                                            telemetryRecorder = telemetryRecorder
-                                        )
-                                    )
-                                    onFinish()
+                                if (totalDurationSeconds > 0L || totalDistanceMeters > 0.0) {
+                                    showFinishConfirmation = true
                                 }
                             }
                         )
