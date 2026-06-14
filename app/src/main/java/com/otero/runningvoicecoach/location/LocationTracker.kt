@@ -77,6 +77,7 @@ class LocationTracker(
             return
         }
 
+        val speedMetersPerSecond = location.speed.takeIf { location.hasSpeed() && it >= MIN_TRACKED_SPEED_METERS_PER_SECOND }
         val previousLocation = lastAcceptedLocation
         val distanceDelta = if (previousLocation != null && isPlausibleMovement(previousLocation, location)) {
             previousLocation.distanceTo(location).toDouble()
@@ -86,7 +87,6 @@ class LocationTracker(
 
         lastAcceptedLocation = location
 
-        val speedMetersPerSecond = location.speed.takeIf { it > 0f }
         _state.value = _state.value.copy(
             latitude = location.latitude,
             longitude = location.longitude,
@@ -115,12 +115,18 @@ class LocationTracker(
 
         val distanceMeters = previous.distanceTo(current)
         val calculatedSpeed = distanceMeters / elapsedSeconds
-        return calculatedSpeed <= MAX_PLAUSIBLE_RUNNING_SPEED_METERS_PER_SECOND
+        val reportedSpeed = current.speed.takeIf { current.hasSpeed() } ?: return false
+
+        return distanceMeters >= MIN_ACCEPTED_MOVEMENT_METERS &&
+            reportedSpeed >= MIN_TRACKED_SPEED_METERS_PER_SECOND &&
+            calculatedSpeed <= MAX_PLAUSIBLE_RUNNING_SPEED_METERS_PER_SECOND
     }
 
     private companion object {
         const val MAX_ACCEPTED_ACCURACY_METERS = 25f
         const val MAX_PLAUSIBLE_RUNNING_SPEED_METERS_PER_SECOND = 12.0
+        const val MIN_ACCEPTED_MOVEMENT_METERS = 0.75f
+        const val MIN_TRACKED_SPEED_METERS_PER_SECOND = 0.8f
         const val MILLIS_PER_SECOND = 1000.0
 
         val locationRequest: LocationRequest = LocationRequest.Builder(
